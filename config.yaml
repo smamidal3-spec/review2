@@ -1,0 +1,114 @@
+seed: 42
+dataset: noordin                  # default; override with run_all.py --dataset
+outputs_dir: outputs              # each dataset writes to outputs/<dataset>/
+
+agents:
+  supervision_range: [0.1, 0.9]   # MUST vary across agents (identifiability, see SPEC 5.3)
+  init_deviance_range: [0.0, 0.3]
+  seed_deviance: 0.8              # one seeded agent per connected group
+  self_control_range: [0.0, 1.0]
+  kappa: 0.1                      # base deviance update rate
+
+reward_true:                      # THE ANSWER KEY. Only simulator.py and grade.py read this block.
+  theta: {peer_approval: 0.4, material_gain: 0.3, status_gain: 0.3, sanction_risk: -0.6}
+  attention: {gamma_status: 4.0, gamma_tie: 2.0}
+
+choice:
+  beta: 5.0                       # inverse temperature, fixed and known to the learner
+
+actions:
+  names: [prosocial, neutral, minor_deviance, escalated_deviance]
+  level: [0.0, 0.3333333, 0.6666667, 1.0]
+  severity: [0.0, 0.0, 0.5, 1.0]
+  material: [0.0, 0.0, 0.5, 1.0]
+  bad: [2, 3]
+
+run:
+  steps: 50
+  train_episodes: 200
+  test_fraction: 0.2              # split by episode
+  ablation_seeds: 20
+  ablation_max_ties: 60           # above this, ablate the ties with the highest edge betweenness
+  intervention_seeds: 30
+  data_efficiency_episodes: [1, 3, 10, 50, 200]
+  final_window: 10                # "final bad share" = mean bad share over last 10 steps
+
+quick:                            # used by --quick and the app's live re-run
+  train_episodes: 20
+  ablation_seeds: 3
+  intervention_seeds: 5
+  data_efficiency_episodes: [1, 3, 10]
+
+interventions:
+  supervision_increase: 0.2
+
+# One block per network. `reference` holds the verified statistics that the tests assert
+# (SPEC.md section 4, SPEC_MULTIDATASET.md section 3).
+datasets:
+  noordin:
+    main_label: pre-attack             # name of the main network in chart text
+    data_dir: data/raw
+    tie_label: Kinship
+    later_label: Post-attack
+    kinship_counts_only_if_in_pre: true
+    reference:
+      nodes: 28
+      pairs: 38
+      groups: [15, 8, 5]
+      isolates: 0
+      max_degree: 10
+      later: {pairs: 13, isolated: 13}
+  caviar:
+    main_label: full             # name of the main network in chart text
+    data_dir: data/raw/caviar
+    tie_label: Call volume
+    main_layer: full
+    later_layer: phase11
+    later_label: Phase 11
+    reference:
+      nodes: 110
+      pairs: 205
+      directed: 295
+      mutual: 90
+      calls: 3546
+      groups: [110]
+      isolates: 0
+      max_degree: 60
+      max_degree_id: "1"
+      second_degree: 28
+      second_degree_id: "12"
+      later: {pairs: 50, directed: 72, mutual: 22, nodes_with_ties: 41, max_degree: 12, max_degree_id: "12", groups: [39, 2]}
+  drugnet:
+    main_label: acquaintance             # name of the main network in chart text
+    data_dir: data/raw/drugnet
+    tie_label: Mutual tie
+    main_layer: acquaintance
+    isolates_not_in_file: 81
+    reference:
+      nodes: 212
+      pairs: 284
+      directed: 337
+      mutual: 53
+      groups_count: 9
+      largest_group: 193
+      isolates: 0
+      max_degree: 15
+      max_degree_id: "50"
+  knecht:
+    main_label: wave 1             # name of the main network in chart text
+    data_dir: data/raw/knecht
+    tie_label: Mutual friendship
+    main_layer: wave1
+    later_layer: wave4
+    later_label: Wave 4
+    reference:
+      nodes: 26
+      pairs: 63
+      directed: 91
+      mutual: 28
+      groups: [26]
+      isolates: 0
+      max_degree: 10
+      max_degree_id: "9"
+      later: {pairs: 86, directed: 119, mutual: 33, nodes_with_ties: 25, max_degree: 15, max_degree_id: "8"}
+      wave_pairs: [63, 84, 97, 86]

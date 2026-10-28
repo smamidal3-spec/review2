@@ -1,0 +1,514 @@
+{
+  "dataset": "noordin",
+  "mode": "full",
+  "seed": 42,
+  "graph": {
+    "nodes": 28,
+    "ties": 38,
+    "mutual_pairs": 29,
+    "group_sizes": "15, 8, 5",
+    "groups": 3,
+    "isolates": 0,
+    "max_degree": 10,
+    "highest_degree_agent": "A11 (degree 10)",
+    "second_highest_degree_agent": "A07 (degree 6)",
+    "average_degree": 2.714,
+    "hub_share": 0.263,
+    "tie_feature": "Kinship",
+    "tie_feature_nonzero": 34,
+    "tie_feature_mean": 0.895,
+    "later_network": "Post-attack",
+    "later_ties": 13,
+    "later_isolated_agents": 13,
+    "pre_attack_ties": 38,
+    "kinship_ties": 34,
+    "kinship_ties_in_pre": 34,
+    "post_attack_ties": 13,
+    "post_ties_in_pre": 13,
+    "pre_attack_group_sizes": "15, 8, 5",
+    "post_attack_isolated_agents": 13
+  },
+  "recovery": {
+    "theta_true": [
+      0.4,
+      0.3,
+      0.3,
+      -0.6
+    ],
+    "theta_hat": [
+      0.40050045456064903,
+      0.30370914976937385,
+      0.2889864267531164,
+      -0.6014626598241364
+    ],
+    "cosine": 0.9999027943962567,
+    "max_abs_error": 0.011013573246883568,
+    "signs_correct": true,
+    "gamma_status_true": 4.0,
+    "gamma_tie_true": 2.0,
+    "gamma_status_hat": 4.04998721057503,
+    "gamma_tie_hat": 1.4693900482838598
+  },
+  "recovered": {
+    "theta_hat": [
+      0.40050045456064903,
+      0.30370914976937385,
+      0.2889864267531164,
+      -0.6014626598241364
+    ],
+    "gamma_hat": {
+      "gamma_status": 4.04998721057503,
+      "gamma_tie": 1.4693900482838598
+    },
+    "nll": 259201.98000415164,
+    "n_decisions": 224000,
+    "converged": true
+  },
+  "bc": {
+    "accuracy": 0.449875,
+    "majority_class": 3,
+    "majority_accuracy": 0.36958928571428573,
+    "confusion": [
+      [
+        2149,
+        2033,
+        1689,
+        2173
+      ],
+      [
+        1331,
+        3321,
+        2921,
+        3863
+      ],
+      [
+        780,
+        2218,
+        3587,
+        9238
+      ],
+      [
+        609,
+        1258,
+        2694,
+        16136
+      ]
+    ],
+    "good_bad_confusion": [
+      [
+        8834,
+        10646
+      ],
+      [
+        4865,
+        31655
+      ]
+    ],
+    "good_bad_accuracy": 0.7230178571428572
+  },
+  "recovered_eval": {
+    "accuracy": 0.46985714285714286,
+    "mean_log_likelihood": -1.1732743270892674,
+    "confusion": [
+      [
+        2613,
+        2180,
+        1466,
+        1785
+      ],
+      [
+        1676,
+        3926,
+        2612,
+        3222
+      ],
+      [
+        1016,
+        2495,
+        4832,
+        7480
+      ],
+      [
+        784,
+        1635,
+        3337,
+        14941
+      ]
+    ],
+    "good_bad_confusion": [
+      [
+        10395,
+        9085
+      ],
+      [
+        5930,
+        30590
+      ]
+    ],
+    "good_bad_accuracy": 0.731875
+  },
+  "explanations": {
+    "recovered": {
+      "top1": 1.0,
+      "top3": 1.0,
+      "n": 34000
+    },
+    "most_similar": {
+      "top1": 0.7887058823529411,
+      "top3": 0.9647058823529412,
+      "n": 34000
+    },
+    "random": {
+      "top1": 0.3186274509803922,
+      "top3": 0.8088235294117647,
+      "n": 34000
+    }
+  },
+  "ablation_agreement": {
+    "spearman": 0.7411095305832147,
+    "p_value": 1.0301631829865538e-07,
+    "n_ties": 38
+  },
+  "surrogate_tree_fidelity": 0.6797321428571429,
+  "cascade_gap": {
+    "bc": 0.015464285714285713,
+    "recovered": 0.0023571428571428545
+  },
+  "sensitivity": [
+    {
+      "setting": "true theta",
+      "final_bad_share": 0.7189285714285714,
+      "ci_low": 0.687043671521166,
+      "ci_high": 0.7508134713359768,
+      "seeds": 20
+    },
+    {
+      "setting": "sanction weight doubled",
+      "final_bad_share": 0.3158928571428571,
+      "ci_low": 0.27722917399268576,
+      "ci_high": 0.3545565402930284,
+      "seeds": 20
+    }
+  ],
+  "interventions": [
+    {
+      "scenario": "Hub isolation (A11)",
+      "baseline_bad_share": 0.7142857142857142,
+      "scenario_bad_share": 0.6713095238095237,
+      "delta": -0.04297619047619046,
+      "ci_low": -0.06214643102255199,
+      "ci_high": -0.023805949929828926,
+      "seeds": 30
+    },
+    {
+      "scenario": "Mentor injection (A07)",
+      "baseline_bad_share": 0.7142857142857142,
+      "scenario_bad_share": 0.6023809523809522,
+      "delta": -0.11190476190476192,
+      "ci_low": -0.12756563146072983,
+      "ci_high": -0.09624389234879402,
+      "seeds": 30
+    },
+    {
+      "scenario": "Supervision +0.2",
+      "baseline_bad_share": 0.7142857142857142,
+      "scenario_bad_share": 0.4959523809523808,
+      "delta": -0.21833333333333335,
+      "ci_low": -0.23640019086296946,
+      "ci_high": -0.20026647580369725,
+      "seeds": 30
+    },
+    {
+      "scenario": "Real disruption (post-attack graph)",
+      "baseline_bad_share": 0.7142857142857142,
+      "scenario_bad_share": 0.6161904761904761,
+      "delta": -0.09809523809523811,
+      "ci_low": -0.11590779554960534,
+      "ci_high": -0.08028268064087088,
+      "seeds": 30
+    }
+  ],
+  "train_episodes": [
+    0,
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9,
+    10,
+    11,
+    12,
+    13,
+    14,
+    15,
+    16,
+    17,
+    18,
+    19,
+    20,
+    21,
+    22,
+    23,
+    24,
+    25,
+    26,
+    27,
+    28,
+    29,
+    30,
+    31,
+    32,
+    33,
+    34,
+    35,
+    36,
+    37,
+    38,
+    39,
+    40,
+    41,
+    42,
+    43,
+    44,
+    45,
+    46,
+    47,
+    48,
+    49,
+    50,
+    51,
+    52,
+    53,
+    54,
+    55,
+    56,
+    57,
+    58,
+    59,
+    60,
+    61,
+    62,
+    63,
+    64,
+    65,
+    66,
+    67,
+    68,
+    69,
+    70,
+    71,
+    72,
+    73,
+    74,
+    75,
+    76,
+    77,
+    78,
+    79,
+    80,
+    81,
+    82,
+    83,
+    84,
+    85,
+    86,
+    87,
+    88,
+    89,
+    90,
+    91,
+    92,
+    93,
+    94,
+    95,
+    96,
+    97,
+    98,
+    99,
+    100,
+    101,
+    102,
+    103,
+    104,
+    105,
+    106,
+    107,
+    108,
+    109,
+    110,
+    111,
+    112,
+    113,
+    114,
+    115,
+    116,
+    117,
+    118,
+    119,
+    120,
+    121,
+    122,
+    123,
+    124,
+    125,
+    126,
+    127,
+    128,
+    129,
+    130,
+    131,
+    132,
+    133,
+    134,
+    135,
+    136,
+    137,
+    138,
+    139,
+    140,
+    141,
+    142,
+    143,
+    144,
+    145,
+    146,
+    147,
+    148,
+    149,
+    150,
+    151,
+    152,
+    153,
+    154,
+    155,
+    156,
+    157,
+    158,
+    159
+  ],
+  "test_episodes": [
+    160,
+    161,
+    162,
+    163,
+    164,
+    165,
+    166,
+    167,
+    168,
+    169,
+    170,
+    171,
+    172,
+    173,
+    174,
+    175,
+    176,
+    177,
+    178,
+    179,
+    180,
+    181,
+    182,
+    183,
+    184,
+    185,
+    186,
+    187,
+    188,
+    189,
+    190,
+    191,
+    192,
+    193,
+    194,
+    195,
+    196,
+    197,
+    198,
+    199
+  ],
+  "action_names": [
+    "prosocial",
+    "neutral",
+    "minor_deviance",
+    "escalated_deviance"
+  ],
+  "insights": [
+    "Behaviour alone was enough to recover the hidden motives. From 224,000 observed decisions the learner matched the true reward weights with cosine 0.9999 (largest error 0.011, on status gain). With a single episode (1,400 decisions) the cosine was already 0.999.",
+    "Who an agent listens to matters as much as what they want. Recovered attention named the true influencer in 100% of held-out decisions, against 79% for the most similar neighbour and 32% for a random one.",
+    "Supervision +0.2 cut the final bad share most, by 0.218 (from 0.71), and its 95% interval excludes zero. The real post-attack network changed it by -0.098. Removing any single tie moved it by at most 0.009, so in this model behaviour is driven by incentives and supervision more than by any one relationship.",
+    "A model of motives generalises better than a copy of actions: rolled forward, the recovered reward stays closer to the true cascade than behavioural cloning (mean gap 0.002 vs 0.015). One-step accuracy alone hides this: 0.47 for the recovered reward vs 0.45 for cloning."
+  ],
+  "acceptance": [
+    {
+      "check": "Sensitivity: doubling the sanction weight lowers final bad share by at least 0.20",
+      "passed": true,
+      "value": "0.403"
+    },
+    {
+      "check": "Action variety: every action is at least 5% of decisions",
+      "passed": true,
+      "value": "13.8%, 19.3%, 28.2%, 38.7%"
+    },
+    {
+      "check": "Recovery (full data): cosine at least 0.98",
+      "passed": true,
+      "value": "0.9999"
+    },
+    {
+      "check": "Recovery (full data): every theta within 0.05 of truth",
+      "passed": true,
+      "value": "0.011"
+    },
+    {
+      "check": "Recovery (full data): all four signs correct",
+      "passed": true,
+      "value": "True"
+    },
+    {
+      "check": "Recovery (1 episode): cosine at least 0.90",
+      "passed": true,
+      "value": "0.9995"
+    },
+    {
+      "check": "gamma_status within 1.0 of truth",
+      "passed": true,
+      "value": "4.05 (true 4.0)"
+    },
+    {
+      "check": "Explanations: Top-1 at least 0.95",
+      "passed": true,
+      "value": "1.000"
+    },
+    {
+      "check": "Explanations: Top-1 above the most-similar baseline",
+      "passed": true,
+      "value": "1.000 vs 0.789"
+    },
+    {
+      "check": "BC: held-out accuracy above the majority class",
+      "passed": true,
+      "value": "0.450 vs 0.370"
+    },
+    {
+      "check": "Cascade: recovered-policy gap below the BC gap",
+      "passed": true,
+      "value": "0.0024 vs 0.0155"
+    }
+  ],
+  "runtime_seconds": {
+    "1 graph": 0.02,
+    "2 simulate": 13.57,
+    "3 imitation learning": 19.12,
+    "2 ablation + sensitivity": 4.47,
+    "5 explainable AI": 0.39,
+    "4 adoption": 0.58,
+    "6 interventions": 0.91,
+    "figures": 0.89
+  }
+}

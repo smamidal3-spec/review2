@@ -1,0 +1,43 @@
+stat,value
+nodes,110
+ties,205
+mutual_pairs,90
+group_sizes,110
+groups,1
+isolates,0
+max_degree,60
+highest_degree_agent,A001 (degree 60)
+second_highest_degree_agent,A012 (degree 28)
+average_degree,3.727
+hub_share,0.293
+tie_feature,Call volume
+tie_feature_nonzero,205
+tie_feature_mean,0.305
+later_network,Phase 11
+later_ties,50
+later_isolated_agents,69
+calls_total,3546
+hub_call_share,0.577
+pairs_phase1,18
+top_agent_phase1,A001 (degree 12)
+pairs_phase2,28
+top_agent_phase2,A001 (degree 19)
+pairs_phase3,56
+top_agent_phase3,A001 (degree 27)
+pairs_phase4,48
+top_agent_phase4,A001 (degree 23)
+pairs_phase5,39
+top_agent_phase5,A001 (degree 22)
+pairs_phase6,47
+top_agent_phase6,A001 (degree 18)
+pairs_phase7,49
+top_agent_phase7,A001 (degree 24)
+pairs_phase8,58
+top_agent_phase8,A001 (degree 20)
+pairs_phase9,44
+top_agent_phase9,A003 (degree 11)
+pairs_phase10,50
+top_agent_phase10,A001 (degree 13)
+pairs_phase11,50
+top_agent_phase11,A012 (degree 12)
+later_group_sizes,"39, 2"

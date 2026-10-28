@@ -1,0 +1,9 @@
+numpy
+pandas
+scipy
+networkx
+scikit-learn
+matplotlib
+plotly
+streamlit>=1.40.0
+pyyaml

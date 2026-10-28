@@ -1,0 +1,22 @@
+|--- mean_nbr_level <= 0.73
+|   |--- mean_nbr_level <= 0.21
+|   |   |--- mean_nbr_level <= 0.12
+|   |   |   |--- class: prosocial
+|   |   |--- mean_nbr_level >  0.12
+|   |   |   |--- class: prosocial
+|   |--- mean_nbr_level >  0.21
+|   |   |--- max_nbr_level <= 0.50
+|   |   |   |--- class: neutral
+|   |   |--- max_nbr_level >  0.50
+|   |   |   |--- class: minor_deviance
+|--- mean_nbr_level >  0.73
+|   |--- mean_nbr_level <= 0.85
+|   |   |--- supervision <= 0.62
+|   |   |   |--- class: escalated_deviance
+|   |   |--- supervision >  0.62
+|   |   |   |--- class: minor_deviance
+|   |--- mean_nbr_level >  0.85
+|   |   |--- mean_nbr_level <= 0.96
+|   |   |   |--- class: escalated_deviance
+|   |   |--- mean_nbr_level >  0.96
+|   |   |   |--- class: escalated_deviance

@@ -1,0 +1,555 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@600;700;800&family=Inter:wght@400;500;600&display=swap">
+<style>
+/* Layout: canvas on the left, live readout on the right; stacks on narrow screens. LOOP tokens. */
+:root {
+  --bg: #FAF7F2; --card: #FFFFFF; --fg: #0F172A; --muted: #5C6657; --line: #E7E1D5; --soft: #F1EDE4;
+  --green: #006e1c; --green2: #4caf50; --greenSoft: #E8F5E9; --amber: #B45309; --amberSoft: #FDF1E2;
+  --rust: #C2410C; --rustSoft: #FBE9E1; --slate: #A8B0A4;
+  --head: 'Plus Jakarta Sans', 'Inter', system-ui, sans-serif; --body: 'Inter', system-ui, sans-serif;
+  --shadow: 0 10px 30px rgba(10, 25, 47, 0.06);
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; background: var(--bg); color: var(--fg); font-family: var(--body); font-size: 14px; }
+.wrap { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 14px; padding: 2px 2px 8px; }
+@media (max-width: 860px) { .wrap { grid-template-columns: 1fr; } }
+.panel { background: var(--card); border: 1px solid var(--line); border-radius: 16px; box-shadow: var(--shadow); }
+.stage { position: relative; overflow: hidden; min-width: 0; }
+svg { display: block; width: 100%; height: 600px; cursor: grab; }
+svg:active { cursor: grabbing; }
+
+/* Toolbar */
+.bar { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; padding: 12px 14px; border-bottom: 1px solid var(--line); }
+.play { width: 40px; height: 40px; border-radius: 50%; border: none; background: var(--green); color: #fff; cursor: pointer;
+  display: grid; place-items: center; transition: transform 150ms cubic-bezier(0.34, 1.56, 0.64, 1); flex: none; }
+.play:active { transform: scale(0.94); }
+.play:focus-visible, .btn:focus-visible, .chip:focus-visible { outline: 2px solid var(--green2); outline-offset: 2px; }
+.timeline { flex: 1 1 220px; min-width: 180px; display: grid; gap: 4px; }
+.timeline .ends { display: flex; justify-content: space-between; font-size: 11px; font-weight: 600; color: var(--muted);
+  letter-spacing: .06em; text-transform: uppercase; }
+input[type=range] { width: 100%; accent-color: var(--green); }
+.btn { border: 1px solid var(--line); background: var(--card); color: var(--fg); border-radius: 999px; padding: 7px 13px;
+  font: 600 12.5px var(--head); cursor: pointer; }
+.btn:hover { background: var(--soft); }
+.btn[disabled] { opacity: .45; cursor: default; }
+.btn.primary { background: var(--green); border-color: var(--green); color: #fff; }
+.btn.primary:hover { background: #005a17; }
+.btn.danger { border-color: #F3C9B6; color: var(--rust); justify-self: start; }
+.btn.danger:hover { background: var(--rustSoft); }
+.result { border-top: 1px solid var(--line); padding-top: 12px; display: grid; gap: 8px; }
+.result .empty { color: var(--muted); font-size: 12.5px; line-height: 1.45; }
+.cmp { display: flex; align-items: center; gap: 8px; }
+.cmp > div:not(.arrow) { flex: 1; background: var(--soft); border-radius: 12px; padding: 8px 10px; }
+.cmp span { display: block; font-size: 11px; color: var(--muted); }
+.cmp b { font: 800 22px var(--head); letter-spacing: -.03em; font-variant-numeric: tabular-nums; }
+.cmp .arrow { color: var(--muted); font-weight: 700; }
+.delta { font: 800 15px var(--head); }
+.delta.down { color: var(--green); } .delta.up { color: var(--rust); }
+.groups-box { display: grid; gap: 6px; border-top: 1px solid var(--line); padding-top: 10px; }
+.grow { display: grid; grid-template-columns: minmax(0, 1.4fr) auto auto; gap: 8px; font-size: 12.5px; align-items: baseline; }
+.grow span:nth-child(2) { color: var(--muted); font-variant-numeric: tabular-nums; }
+.chips { display: flex; gap: 6px; flex-wrap: wrap; }
+.chip { border: 1px solid var(--line); background: var(--card); border-radius: 999px; padding: 5px 11px; font: 600 12px var(--head);
+  color: var(--muted); cursor: pointer; }
+.chip[aria-pressed=true] { background: var(--greenSoft); border-color: #CFE6D2; color: #14532D; }
+.chip.mode[aria-pressed=true] { background: var(--fg); border-color: var(--fg); color: var(--card); }
+.pct { font: 800 26px var(--head); letter-spacing: -.03em; }
+.pct.down { color: var(--green); } .pct.up { color: var(--rust); } .pct.flat { color: var(--muted); }
+
+/* Overlays on the canvas */
+.canvas { position: relative; }
+.phase { position: absolute; left: 16px; top: 14px; font: 800 22px var(--head); letter-spacing: -.02em; pointer-events: none; }
+.phase small { display: block; font: 500 12px var(--body); color: var(--muted); letter-spacing: 0; margin-top: 2px; }
+.legend { position: absolute; left: 16px; bottom: 12px; display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 11.5px;
+  color: var(--muted); background: rgba(255,255,255,.85); padding: 7px 10px; border-radius: 10px; border: 1px solid var(--line); }
+.legend span { display: inline-flex; align-items: center; gap: 6px; }
+.sw { width: 22px; height: 0; border-top: 3px solid; border-radius: 2px; display: inline-block; }
+.hint { position: absolute; right: 16px; top: 16px; max-width: 46%; font-size: 11.5px; color: var(--muted); text-align: right; }
+.tip { position: absolute; pointer-events: none; background: var(--fg); color: var(--bg); font-size: 12px; padding: 6px 9px;
+  border-radius: 8px; opacity: 0; transition: opacity 120ms; white-space: nowrap; }
+
+/* Readout */
+.side { padding: 14px; display: grid; gap: 12px; align-content: start; }
+.side h3 { margin: 0; font: 700 15px var(--head); }
+.stats { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.stat { background: var(--soft); border-radius: 12px; padding: 9px 11px; }
+.stat b { display: block; font: 800 22px var(--head); letter-spacing: -.03em; font-variant-numeric: tabular-nums; }
+.stat span { font-size: 11.5px; color: var(--muted); }
+.stat.lost b { color: var(--rust); }
+.groups { display: flex; flex-wrap: wrap; gap: 5px; }
+.groups i { font-style: normal; font: 700 11.5px var(--head); padding: 3px 8px; border-radius: 999px; color: #fff; }
+.who { border-top: 1px solid var(--line); padding-top: 12px; display: grid; gap: 6px; font-size: 13px; }
+.who .row { display: flex; justify-content: space-between; gap: 8px; }
+.who .row span:first-child { color: var(--muted); }
+.who .row span:last-child { font-weight: 600; font-variant-numeric: tabular-nums; }
+.who .empty { color: var(--muted); font-size: 12.5px; line-height: 1.45; }
+.cut-list { font-size: 12px; color: var(--muted); line-height: 1.6; }
+.cut-list b { color: var(--rust); font-weight: 600; }
+.note { font-size: 11.5px; color: var(--muted); line-height: 1.45; border-top: 1px solid var(--line); padding-top: 10px; }
+@media (prefers-reduced-motion: reduce) { .play { transition: none; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="panel stage">
+    <div class="bar">
+      <button class="play" id="play" aria-label="Play from pre-attack to post-attack">
+        <svg id="playIcon" width="16" height="16" viewBox="0 0 16 16" style="width:16px;height:16px;cursor:inherit"><path d="M4 2.5v11l9-5.5z" fill="currentColor"/></svg>
+      </button>
+      <div class="timeline">
+        <input type="range" id="time" min="0" max="1000" value="0" aria-label="Timeline from pre-attack to post-attack">
+        <div class="ends"><span>Pre-attack</span><span>Post-attack</span></div>
+      </div>
+      <div class="chips" role="group" aria-label="What clicking does">
+        <button class="chip mode" id="mCut" aria-pressed="true">&#9986; Cut ties</button>
+        <button class="chip mode" id="mAdd" aria-pressed="false">+ Add ties</button>
+      </div>
+      <div class="chips" role="group" aria-label="Edge colouring">
+        <button class="chip" id="cLayers" aria-pressed="true">Tie layers</button>
+        <button class="chip" id="cFragile" aria-pressed="false">Fragile ties</button>
+        <button class="chip" id="cGhost" aria-pressed="true">Show lost ties</button>
+      </div>
+      <button class="btn" id="undo" disabled>Undo</button>
+      <button class="btn" id="reset">Reset</button>
+      <button class="btn primary" id="simulate">Simulate this network</button>
+    </div>
+    <div class="canvas">
+      <div class="phase" id="phase">Pre-attack network<small id="phaseSub">38 ties among 28 agents</small></div>
+      <svg id="net" role="img" aria-label="Interactive network of the 28 agents"></svg>
+      <div class="legend" id="legend"></div>
+      <div class="hint" id="hint"></div>
+    </div>
+    <div class="tip" id="tip"></div>
+  </div>
+
+  <aside class="panel side">
+    <h3>Live network</h3>
+    <div class="stats">
+      <div class="stat"><b id="sTies">38</b><span>active ties</span></div>
+      <div class="stat lost"><b id="sLost">0</b><span>ties lost or cut</span></div>
+      <div class="stat"><b id="sGroups">3</b><span>connected groups</span></div>
+      <div class="stat"><b id="sIso">0</b><span>agents with no ties</span></div>
+    </div>
+    <div>
+      <div style="font-size:11.5px;color:var(--muted);margin-bottom:6px">Group sizes (colour = node colour)</div>
+      <div class="groups" id="groups"></div>
+    </div>
+    <div class="who" id="who"><div class="empty">Click an agent to see its ties before and after the attack, and which of them were kinship.</div></div>
+    <div class="cut-list" id="cuts"></div>
+    <div class="result" id="result"><div class="empty">Cut ties or scrub the timeline, then press <b>Simulate this network</b> to see how agents behave on it.</div></div>
+    <div class="note" id="note"></div>
+  </aside>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/d3@7.9.0/dist/d3.min.js"></script>
+<script>
+let DATA = null;
+const send = (type, extra) => window.parent.postMessage(Object.assign({ isStreamlitMessage: true, type }, extra || {}), '*');
+let sentH = 0;
+const setHeight = () => {
+  const h = Math.ceil(document.body.getBoundingClientRect().height);
+  if (h > 20 && h !== sentH) { sentH = h; send('streamlit:setFrameHeight', { height: h }); }  // 0 while the tab is hidden
+};
+setInterval(setHeight, 500);
+let onResult = () => {};
+window.addEventListener('message', ev => {
+  if (!ev.data || ev.data.type !== 'streamlit:render') return;
+  const args = ev.data.args || {};
+  if (!DATA) { DATA = args.data; init(); }
+  onResult(args.result || null);
+  setHeight();
+});
+new ResizeObserver(setHeight).observe(document.body);
+send('streamlit:componentReady', { apiVersion: 1 });
+
+function init() {
+const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+const C = { green: css('--green'), green2: css('--green2'), slate: css('--slate'), rust: css('--rust'), amber: css('--amber'),
+            fg: css('--fg'), muted: css('--muted'), card: css('--card'), line: css('--line') };
+const GROUP_COLORS = ['#0F172A', '#006e1c', '#B45309', '#2F6F8F', '#7A4E9C', '#4caf50', '#C2410C', '#8A7A5C'];
+const LAYER_COLOR = { 1: C.slate, 2: C.green2, 3: C.green };
+const T = DATA.text, BIG = DATA.labels.length > 40, LATER = !!T.later;
+const LAYER_TEXT = LATER
+  ? { 1: `${T.main} only`, 2: 'Two layers', 3: `${T.main}, ${T.tie.toLowerCase()} and ${T.later.toLowerCase()}` }
+  : { 1: `Without ${T.tie.toLowerCase()}`, 2: `With ${T.tie.toLowerCase()}`, 3: '' };
+const WHO_EMPTY = `Click an agent to see its ties${LATER ? ' before and after' : ''}, and which of them carry the ${T.tie.toLowerCase()} feature.`;
+document.querySelector('.ends').innerHTML = LATER ? `<span>${T.main}</span><span>${T.later}</span>` : '';
+document.getElementById('net').setAttribute('aria-label', `Interactive network of the ${DATA.labels.length} agents`);
+document.getElementById('time').setAttribute('aria-label', `Timeline from ${T.main} to ${LATER ? T.later : ''}`);
+document.getElementById('play').setAttribute('aria-label', `Play from ${T.main} to ${T.later || ''}`);
+if (!LATER) { ['play', 'cGhost'].forEach(id => document.getElementById(id).style.display = 'none'); document.querySelector('.timeline').style.display = 'none'; }
+document.getElementById('who').innerHTML = `<div class="empty">${WHO_EMPTY}</div>`;
+if (!LATER) document.getElementById('result').innerHTML = '<div class="empty">Cut ties, remove agents or add ties, then press <b>Simulate this network</b> to see how agents behave on it.</div>';
+
+document.getElementById('note').textContent = DATA.note + ' ' + DATA.disclaimer;
+
+// ---------------------------------------------------------------- model
+const nodes = DATA.labels.map((id, i) => ({ id, i, deg: DATA.degree[i] }));
+const byId = Object.fromEntries(nodes.map(n => [n.id, n]));
+const links = DATA.edges.map((e, k) => ({
+  k, source: e.agent_i, target: e.agent_j, a: e.agent_i, b: e.agent_j, kin: !!e.kin, post: !!e.post,
+  layers: 1 + (e.kin ? 1 : 0) + (e.post ? 1 : 0),
+}));
+// Lost ties disappear in a fixed, seeded order between 10% and 85% of the timeline.
+const lost = links.filter(l => !l.post);
+let seed = 7; const rand = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+lost.map(l => [rand(), l]).sort((x, y) => x[0] - y[0]).forEach(([, l], j) => { l.at = 0.10 + 0.75 * j / Math.max(1, lost.length - 1); });
+links.forEach(l => { if (l.post) l.at = Infinity; });
+
+const state = { t: 0, playing: false, cut: [], removed: [], history: [], focus: null, colour: 'layers', ghosts: true, mode: 'cut', pick: null };
+let addCount = 0;
+const BLUE = '#2F6F8F';
+const hasTie = (a, b) => links.some(l => (l.a === a && l.b === b) || (l.a === b && l.b === a));
+function addTie(a, b) {
+  const pre = links.find(l => !l.added && ((l.a === a && l.b === b) || (l.a === b && l.b === a)));
+  if (pre) {   // an existing pre-attack tie: adding it back just undoes a cut
+    if (state.cut.includes(pre.k)) { state.cut = state.cut.filter(k => k !== pre.k); state.history.push({ type: 'uncut', k: pre.k }); }
+    return;
+  }
+  if (hasTie(a, b)) return;
+  const l = { k: 'n' + (addCount++), source: a, target: b, a, b, kin: false, post: false, layers: 0, added: true, at: Infinity };
+  links.push(l); state.history.push({ type: 'add', k: l.k }); joinLinks();
+}
+function dropAdded(k) { const i = links.findIndex(l => l.k === k); if (i >= 0) links.splice(i, 1); joinLinks(); }
+const gone = id => state.removed.includes(id);
+const isActive = l => state.t < l.at && !state.cut.includes(l.k) && !gone(l.a) && !gone(l.b);
+function removeAgent(id) { if (gone(id)) return; state.removed.push(id); state.history.push({ type: 'remove', id }); hideTip(); update(true); }
+function restoreAgent(id) { state.removed = state.removed.filter(x => x !== id); state.history = state.history.filter(h => !(h.type === 'remove' && h.id === id)); update(true); }
+
+// ---------------------------------------------------------------- graph maths (live)
+function components(active) {
+  const adj = new Map(nodes.map(n => [n.id, []]));
+  active.forEach(l => { adj.get(l.a).push(l.b); adj.get(l.b).push(l.a); });
+  const seen = new Set(), comps = [];
+  for (const n of nodes) {
+    if (seen.has(n.id) || gone(n.id)) continue;
+    const stack = [n.id], comp = []; seen.add(n.id);
+    while (stack.length) { const u = stack.pop(); comp.push(u); for (const v of adj.get(u)) if (!seen.has(v)) { seen.add(v); stack.push(v); } }
+    comps.push(comp);
+  }
+  return comps.sort((x, y) => y.length - x.length || x[0].localeCompare(y[0]));
+}
+function fragile(active) {
+  // a tie is fragile if removing it splits its group
+  const out = new Set();
+  for (const l of active) {
+    const rest = active.filter(m => m !== l);
+    const adj = new Map(nodes.map(n => [n.id, []]));
+    rest.forEach(m => { adj.get(m.a).push(m.b); adj.get(m.b).push(m.a); });
+    const seen = new Set([l.a]), stack = [l.a];
+    while (stack.length) { const u = stack.pop(); for (const v of adj.get(u)) if (!seen.has(v)) { seen.add(v); stack.push(v); } }
+    if (!seen.has(l.b)) out.add(l.k);
+  }
+  return out;
+}
+
+// ---------------------------------------------------------------- drawing
+const svg = d3.select('#net');
+const W = () => svg.node().clientWidth, H = () => svg.node().clientHeight;
+const root = svg.append('g');
+svg.call(d3.zoom().scaleExtent([0.4, 3]).on('zoom', ev => root.attr('transform', ev.transform)));
+const gGhost = root.append('g'), gLink = root.append('g'), gHit = root.append('g'), gNode = root.append('g');
+
+const sim = d3.forceSimulation(nodes)
+  .force('link', d3.forceLink([]).id(d => d.id).distance(l => BIG ? 26 : 64 + 10 * (3 - l.layers)).strength(0.6))
+  .force('charge', d3.forceManyBody().strength(BIG ? -45 : -340).distanceMax(BIG ? 250 : 420))
+  .force('x', d3.forceX(() => W() / 2).strength(0.045))
+  .force('y', d3.forceY(() => H() / 2 + 20).strength(0.06))
+  .force('collide', d3.forceCollide(d => radius(d) + (BIG ? 2 : 14)).strength(0.9));
+function radius(d) { return BIG ? 3 + 2.1 * Math.sqrt(d.deg) : 7.5 + 1.7 * d.deg; }
+
+let ghost, line, hit;
+function joinLinks() {
+  ghost = gGhost.selectAll('line').data(links.filter(l => !l.added), l => l.k).join('line')
+    .attr('stroke', C.rust).attr('stroke-width', 1.4).attr('stroke-dasharray', '3 4').attr('opacity', 0);
+  line = gLink.selectAll('line').data(links, l => l.k).join('line').attr('stroke-linecap', 'round');
+  hit = gHit.selectAll('line').data(links, l => l.k).join('line').attr('stroke', 'transparent').attr('stroke-width', 14)
+    .style('cursor', 'pointer')
+    .on('mousemove', (ev, l) => tip(ev, l.added
+      ? `<b>${l.a}–${l.b}</b> · added by you<br><span style="opacity:.75">Click to delete it</span>`
+      : `<b>${l.a}–${l.b}</b> · ${LAYER_TEXT[l.layers]}${l.kin ? ', family' : ''}<br><span style="opacity:.75">Click to cut this tie</span>`))
+    .on('mouseleave', hideTip)
+    .on('click', (ev, l) => {
+      hideTip();
+      if (l.added) { dropAdded(l.k); state.history = state.history.filter(h => h.k !== l.k); update(true); return; }
+      if (!isActive(l)) return;
+      state.cut.push(l.k); state.history.push({ type: 'cut', k: l.k }); update(true);
+    });
+  if (sim) { sim.force('link').links([]); lastActiveKey = null; }
+  tick();
+}
+let node;
+node = gNode.selectAll('g').data(nodes).join('g').style('cursor', 'pointer')
+  .call(d3.drag()
+    .on('start', (ev, d) => { if (!ev.active) sim.alphaTarget(0.25).restart(); d.fx = d.x; d.fy = d.y; })
+    .on('drag', (ev, d) => { d.fx = ev.x; d.fy = ev.y; })
+    .on('end', (ev, d) => { if (!ev.active) sim.alphaTarget(0); d.fx = null; d.fy = null; }))
+  .on('click', (ev, d) => {
+    if (ev.detail > 1) return;
+    if (state.mode === 'add') {
+      if (gone(d.id)) return;
+      if (!state.pick) { state.pick = d.id; }
+      else if (state.pick === d.id) { state.pick = null; }
+      else { addTie(state.pick, d.id); state.pick = null; }
+      rubber.attr('display', 'none'); update(true); return;
+    }
+    state.focus = state.focus === d.id ? null : d.id; update(false);
+  })
+  .on('dblclick', (ev, d) => { ev.stopPropagation(); state.focus = d.id; gone(d.id) ? restoreAgent(d.id) : removeAgent(d.id); })
+  .on('mousemove', (ev, d) => tip(ev, gone(d.id) ? `<b>${d.id}</b> · removed<br><span style="opacity:.75">Double-click to bring back</span>`
+      : state.mode === 'add' ? `<b>${d.id}</b><br><span style="opacity:.75">${state.pick ? (state.pick === d.id ? 'Click again to cancel' : `Click to connect ${state.pick} and ${d.id}`) : 'Click to start a new tie here'}</span>`
+      : `<b>${d.id}</b> · ${d.deg} ${T.main.toLowerCase()} ties<br><span style="opacity:.75">Click to focus · double-click to remove</span>`))
+  .on('mouseleave', hideTip);
+node.append('circle').attr('r', radius).attr('stroke-width', 2);
+node.append('path').attr('class', 'x').attr('d', d => { const q = radius(d) * 0.55; return `M${-q},${-q}L${q},${q}M${q},${-q}L${-q},${q}`; })
+  .attr('stroke', C.muted).attr('stroke-width', 2).attr('stroke-linecap', 'round');
+node.append('text').text(d => d.id).attr('text-anchor', 'middle').attr('dy', d => -radius(d) - 6)
+  .attr('display', BIG ? 'none' : null)
+  .attr('font-family', 'Plus Jakarta Sans, Inter, sans-serif').attr('font-weight', 700).attr('font-size', 12).attr('fill', C.fg)
+  .attr('paint-order', 'stroke').attr('stroke', C.card).attr('stroke-width', 4).attr('stroke-linejoin', 'round');
+
+function tick() {
+  if (!line || !node) return;
+  const set = sel => sel.attr('x1', l => byId[l.a].x).attr('y1', l => byId[l.a].y).attr('x2', l => byId[l.b].x).attr('y2', l => byId[l.b].y);
+  set(line); set(hit); set(ghost);
+  node.attr('transform', d => `translate(${d.x},${d.y})`);
+}
+sim.on('tick', tick);
+const rubber = root.insert('line', ':first-child').attr('stroke', BLUE).attr('stroke-width', 2.5).attr('stroke-dasharray', '6 4').attr('display', 'none');
+svg.on('mousemove', ev => {
+  if (state.mode !== 'add' || !state.pick) { rubber.attr('display', 'none'); return; }
+  const [x, y] = d3.pointer(ev, root.node()), p = byId[state.pick];
+  rubber.attr('display', null).attr('x1', p.x).attr('y1', p.y).attr('x2', x).attr('y2', y);
+});
+
+const tipEl = document.getElementById('tip');
+function tip(ev, html) {
+  const r = document.querySelector('.stage').getBoundingClientRect();
+  tipEl.innerHTML = html; tipEl.style.opacity = 1;
+  tipEl.style.left = Math.max(8, Math.min(ev.clientX - r.left + 18, r.width - tipEl.offsetWidth - 8)) + 'px';
+  tipEl.style.top = Math.max(8, ev.clientY - r.top - tipEl.offsetHeight - 14) + 'px';
+}
+function hideTip() { tipEl.style.opacity = 0; }
+
+// ---------------------------------------------------------------- update
+let lastActiveKey = '';
+joinLinks();
+function update(reheat) {
+  const active = links.filter(isActive);
+  const key = active.map(l => l.k).join(',');
+  if (key !== lastActiveKey) {
+    sim.force('link').links(active);
+    if (lastActiveKey !== '' || reheat) sim.alpha(Math.max(sim.alpha(), 0.5)).restart();
+    lastActiveKey = key;
+  }
+  const comps = components(active);
+  const groupOf = {}; let gi = 0;
+  comps.forEach(c => { if (c.length > 1) { c.forEach(id => groupOf[id] = gi); gi++; } });
+  const frag = state.colour === 'fragile' ? fragile(active) : new Set();
+  const nb = new Set();
+  if (state.focus) links.forEach(l => { if (l.a === state.focus) nb.add(l.b); if (l.b === state.focus) nb.add(l.a); });
+  const dim = id => state.focus && id !== state.focus && !nb.has(id);
+
+  // fade lost ties smoothly as the playhead passes them
+  line.attr('stroke', l => l.added && state.colour !== 'fragile' ? BLUE : state.colour === 'fragile' ? (frag.has(l.k) ? C.rust : C.slate) : LAYER_COLOR[l.layers])
+    .attr('stroke-dasharray', l => l.added ? '7 4' : null)
+    .attr('stroke-width', l => state.colour === 'fragile' ? (frag.has(l.k) ? 3.6 : 1.8) : l.added ? 3 : 1.3 + 1.1 * l.layers)
+    .attr('opacity', l => {
+      if (state.cut.includes(l.k) || gone(l.a) || gone(l.b)) return 0;
+      const fade = l.at === Infinity ? 1 : Math.max(0, Math.min(1, (l.at - state.t) / 0.05));
+      return fade * (state.focus && l.a !== state.focus && l.b !== state.focus ? 0.12 : 0.95);
+    });
+  hit.style('pointer-events', l => isActive(l) ? 'auto' : 'none');
+  ghost.attr('opacity', l => state.ghosts && !isActive(l) ? (state.focus && l.a !== state.focus && l.b !== state.focus ? 0.08 : 0.55) : 0);
+
+  node.select('circle')
+    .attr('fill', d => gone(d.id) ? C.card : d.id in groupOf ? GROUP_COLORS[groupOf[d.id] % GROUP_COLORS.length] : C.card)
+    .attr('stroke', d => d.id === state.pick ? BLUE : d.id === state.focus ? C.amber : (gone(d.id) ? C.muted : d.id in groupOf ? C.card : C.muted))
+    .attr('stroke-dasharray', d => gone(d.id) ? '3 3' : null)
+    .attr('stroke-width', d => d.id === state.pick ? 5 : d.id === state.focus ? 3.5 : 1.8)
+    .attr('opacity', d => gone(d.id) ? 0.55 : dim(d.id) ? 0.25 : 1);
+  node.select('.x').attr('display', d => gone(d.id) ? null : 'none');
+  node.select('text').attr('opacity', d => gone(d.id) ? 0.45 : dim(d.id) ? 0.25 : 1);
+
+  // readout
+  const iso = comps.filter(c => c.length === 1).length;
+  document.getElementById('sTies').textContent = active.length;
+  document.getElementById('sLost').textContent = links.filter(l => !l.added).length - active.filter(l => !l.added).length;
+  document.getElementById('sGroups').textContent = comps.filter(c => c.length > 1).length;
+  document.getElementById('sIso').textContent = iso;
+  document.getElementById('groups').innerHTML = comps.filter(c => c.length > 1)
+    .map((c, j) => `<i style="background:${GROUP_COLORS[j % GROUP_COLORS.length]}">${c.length}</i>`).join('') +
+    (iso ? `<i style="background:${C.card};color:${C.muted};border:1px solid ${C.line}">${iso} alone</i>` : '');
+  const phase = !LATER || state.t <= 0 ? `${T.main} network` : state.t >= 1 ? `${T.later} network` : 'Network breaking up';
+  document.getElementById('phase').firstChild.textContent = phase;
+  document.getElementById('phaseSub').textContent = `${active.length} ties among ${DATA.labels.length - state.removed.length} agents` +
+    (state.cut.length ? ` · ${state.cut.length} cut by you` : '') + (state.removed.length ? ` · ${state.removed.length} removed` : '') +
+    (links.some(l => l.added) ? ` · ${links.filter(l => l.added).length} added by you` : '');
+  document.getElementById('hint').textContent = state.mode === 'add'
+    ? (state.pick ? `Now click the agent to connect to ${state.pick} (click ${state.pick} again to cancel)` : 'Add ties: click one agent, then another, to connect them')
+    : 'Click a tie to cut it · double-click an agent to remove it · drag to move · scroll to zoom';
+  document.getElementById('undo').disabled = !state.history.length;
+  document.getElementById('cuts').innerHTML =
+    (state.removed.length ? 'You removed: ' + state.removed.map(id => `<b>${id}</b>`).join(', ') + '<br>' : '') +
+    (state.cut.length ? 'You cut: ' + state.cut.map(k => { const l = links.find(m => m.k === k); return `<b>${l.a}-${l.b}</b>`; }).join(', ') + '<br>' : '') +
+    (links.some(l => l.added) ? 'You added: ' + links.filter(l => l.added).map(l => `<b style="color:${BLUE}">${l.a}-${l.b}</b>`).join(', ') : '');
+  renderWho(active, groupOf, comps);
+  renderLegend();
+}
+
+function renderWho(active, groupOf, comps) {
+  const el = document.getElementById('who');
+  if (!state.focus) { el.innerHTML = `<div class="empty">${WHO_EMPTY}</div>`; return; }
+  const mine = links.filter(l => !l.added && (l.a === state.focus || l.b === state.focus));
+  const other = l => l.a === state.focus ? l.b : l.a;
+  const now = mine.filter(isActive);
+  if (gone(state.focus)) {
+    el.innerHTML = `<h3>${state.focus} <span style="font:600 11px var(--body);color:var(--muted)">removed</span></h3>
+      <div class="empty">All ${mine.length} of its ties are cut. In the simulation it is still there but cannot influence or copy anyone, and it is left out of the bad-share count.</div>
+      <button class="btn" id="restoreBtn">Bring ${state.focus} back</button>`;
+    document.getElementById('restoreBtn').onclick = () => restoreAgent(state.focus);
+    return;
+  }
+  const comp = comps.find(c => c.includes(state.focus));
+  const rows = [
+    [`${T.main} ties`, mine.length], [`${T.tie} ties`, mine.filter(l => l.kin).length],
+    ...(LATER ? [[`Ties still there in ${T.later.toLowerCase()}`, mine.filter(l => l.post).length]] : []), ['Active now', now.length],
+    ['Group size now', comp.length === 1 ? 'alone' : comp.length],
+  ];
+  el.innerHTML = `<h3>${state.focus}</h3>` + rows.map(([a, b]) => `<div class="row"><span>${a}</span><span>${b}</span></div>`).join('') +
+    `<div class="empty">Connected to ${mine.map(l => `${other(l)}${l.post ? '' : '*'}`).join(', ')}${LATER ? `<br>* missing from the ${T.later.toLowerCase()} data` : ''}</div>
+    <button class="btn danger" id="removeBtn">Remove ${state.focus} from the network</button>`;
+  document.getElementById('removeBtn').onclick = () => removeAgent(state.focus);
+}
+
+function renderLegend() {
+  const el = document.getElementById('legend');
+  if (state.colour === 'fragile') {
+    el.innerHTML = `<span><i class="sw" style="border-color:${C.rust}"></i>Fragile: cutting it splits a group</span>
+      <span><i class="sw" style="border-color:${C.slate}"></i>Has a backup path</span>`;
+  } else {
+    el.innerHTML = [1, 2, 3].filter(n => LAYER_TEXT[n]).map(n => `<span><i class="sw" style="border-color:${LAYER_COLOR[n]};border-top-width:${1 + n}px"></i>${LAYER_TEXT[n]}</span>`).join('');
+  }
+  if (state.ghosts) el.innerHTML += `<span><i class="sw" style="border-color:${C.rust};border-top-style:dashed"></i>Lost or cut</span>`;
+  if (links.some(l => l.added)) el.innerHTML += `<span><i class="sw" style="border-color:${BLUE};border-top-style:dashed"></i>Added by you</span>`;
+}
+
+// ---------------------------------------------------------------- controls
+const timeEl = document.getElementById('time'), playBtn = document.getElementById('play'), icon = document.getElementById('playIcon');
+const PLAY = '<path d="M4 2.5v11l9-5.5z" fill="currentColor"/>', PAUSE = '<path d="M4 2.5h3v11H4zM9 2.5h3v11H9z" fill="currentColor"/>';
+let raf = null, last = 0;
+const DURATION = 9000;
+function frame(ts) {
+  if (!state.playing) return;
+  const dt = last ? ts - last : 0; last = ts;
+  state.t = Math.min(1, state.t + dt / DURATION);
+  timeEl.value = Math.round(state.t * 1000);
+  update(false);
+  if (state.t >= 1) { setPlaying(false); return; }
+  raf = requestAnimationFrame(frame);
+}
+function setPlaying(on) {
+  state.playing = on; icon.innerHTML = on ? PAUSE : PLAY;
+  playBtn.setAttribute('aria-label', on ? 'Pause' : 'Play from pre-attack to post-attack');
+  if (on) { if (state.t >= 1) state.t = 0; last = 0; raf = requestAnimationFrame(frame); } else cancelAnimationFrame(raf);
+}
+playBtn.onclick = () => setPlaying(!state.playing);
+timeEl.oninput = () => { setPlaying(false); state.t = timeEl.value / 1000; update(false); };
+document.getElementById('undo').onclick = () => {
+  const h = state.history.pop(); if (!h) return;
+  if (h.type === 'cut') state.cut = state.cut.filter(k => k !== h.k);
+  else if (h.type === 'uncut') state.cut.push(h.k);
+  else if (h.type === 'add') dropAdded(h.k);
+  else state.removed = state.removed.filter(x => x !== h.id);
+  update(true);
+};
+document.getElementById('reset').onclick = () => {
+  setPlaying(false); state.t = 0; state.cut = []; state.removed = []; state.history = []; state.focus = null; state.pick = null; timeEl.value = 0;
+  for (let i = links.length - 1; i >= 0; i--) if (links[i].added) links.splice(i, 1);
+  joinLinks(); update(true);
+};
+const chip = (id, fn) => { const b = document.getElementById(id); b.onclick = () => { fn(b); update(false); }; };
+chip('cLayers', () => { state.colour = 'layers'; sync(); });
+chip('cFragile', () => { state.colour = 'fragile'; sync(); });
+chip('cGhost', b => { state.ghosts = !state.ghosts; b.setAttribute('aria-pressed', state.ghosts); });
+function setMode(m) {
+  state.mode = m; state.pick = null; rubber.attr('display', 'none');
+  document.getElementById('mCut').setAttribute('aria-pressed', m === 'cut');
+  document.getElementById('mAdd').setAttribute('aria-pressed', m === 'add');
+  update(false);
+}
+document.getElementById('mCut').onclick = () => setMode('cut');
+document.getElementById('mAdd').onclick = () => setMode('add');
+function sync() {
+  document.getElementById('cLayers').setAttribute('aria-pressed', state.colour === 'layers');
+  document.getElementById('cFragile').setAttribute('aria-pressed', state.colour === 'fragile');
+}
+svg.on('click', ev => { if (ev.target === svg.node()) { state.focus = null; state.pick = null; rubber.attr('display', 'none'); update(false); } });
+
+// The frame can load while hidden (zero width), so lay out once a real size is known and on every resize.
+let placed = false, lastW = 0;
+function fit() {
+  const w = W(), h = H();
+  if (!w || !h || w === lastW) return;
+  lastW = w;
+  sim.force('x').x(w / 2); sim.force('y').y(h / 2 + 20);
+  if (!placed) {
+    const ext = Math.max(...Object.values(DATA.pos).flat().map(Math.abs), 1);
+    const k = Math.min(85, Math.min(w, h) * 0.45 / ext);   // fit the starting layout to the canvas
+    nodes.forEach(n => { const p = DATA.pos[n.id]; n.x = w / 2 + p[0] * k; n.y = h / 2 + 20 + p[1] * k; });
+    placed = true;
+  }
+  sim.alpha(0.6).restart();
+}
+new ResizeObserver(fit).observe(svg.node());
+fit();
+update(true);
+
+// ---------------------------------------------------------------- simulate the edited network in Python
+const simBtn = document.getElementById('simulate'), resEl = document.getElementById('result');
+let pending = null;
+simBtn.onclick = () => {
+  const act = links.filter(isActive), active = act.filter(l => !l.added).map(l => [l.a, l.b]), added = act.filter(l => l.added).map(l => [l.a, l.b]);
+  pending = Date.now();
+  simBtn.disabled = true; simBtn.textContent = 'Simulating…';
+  resEl.innerHTML = `<div class="empty">Running the behaviour model 30 times on both networks…</div>`;
+  send('streamlit:setComponentValue', { value: { edges: active, added, removed: state.removed.slice(), nonce: pending }, dataType: 'json' });
+};
+function groupsHtml(r) {
+  if (!r.groups || !r.groups.length) return '';
+  const pct = v => `${Math.round(v * 100)}%`;
+  const rows = r.groups.map(g => {
+    const sig = g.ci_high < 0 || g.ci_low > 0, pts = Math.round(g.change * 100);
+    const col = !sig ? 'var(--muted)' : g.change < 0 ? 'var(--green)' : 'var(--rust)';
+    return `<div class="grow"><span><b>${g.agents}</b> ${g.label.toLowerCase()}</span>
+      <span>${pct(g.intact)} → ${pct(g.yours)}</span>
+      <span style="color:${col};font-weight:700">${sig ? (pts > 0 ? '+' : '') + pts + ' pts' : 'no change'}</span></div>`;
+  }).join('');
+  return `<div class="groups-box"><h3 style="font-size:13.5px">Who changed</h3>${rows}
+    <div class="empty">${r.explanation}</div></div>`;
+}
+onResult = r => {
+  if (!r || (pending && r.nonce !== pending)) return;
+  pending = null; simBtn.disabled = false; simBtn.textContent = 'Simulate this network';
+  const sig = r.ci_high < 0 || r.ci_low > 0, rel = r.relative, P = v => Math.abs(v) < 0.1 ? `${(v * 100).toFixed(1)}%` : `${Math.round(v * 100)}%`;
+  const word = !sig ? 'no real change' : rel < 0 ? `${P(-rel)} less bad behaviour` : `${P(rel)} more bad behaviour`;
+  const cls = !sig ? 'flat' : rel < 0 ? 'down' : 'up';
+  const lo = Math.min(Math.abs(r.relative_low), Math.abs(r.relative_high)), hi = Math.max(Math.abs(r.relative_low), Math.abs(r.relative_high));
+  const edits = [r.removed && r.removed.length ? `${r.removed.length} removed` : '', r.added ? `${r.added} added` : ''].filter(Boolean).join(', ');
+  resEl.innerHTML = `<h3>Simulation result</h3>
+    <div class="cmp"><div><span>Intact network</span><b>${P(r.baseline)}</b><span>behaving badly</span></div><div class="arrow">→</div>
+    <div><span>Your network${edits ? ` (${edits})` : ''}</span><b>${P(r.edited)}</b><span>behaving badly</span></div></div>
+    <div class="pct ${cls}">${sig ? (rel < 0 ? '↓ ' : '↑ ') : ''}${word}</div>
+    <div class="empty">${sig
+      ? `Across the 30 runs the change is between ${P(lo)} and ${P(hi)} ${rel < 0 ? 'less' : 'more'}, so it is not luck.`
+      : `Across the 30 runs the change ranges from ${P(Math.abs(r.relative_low))} ${r.relative_low < 0 ? 'less' : 'more'} to ${P(Math.abs(r.relative_high))} ${r.relative_high < 0 ? 'less' : 'more'}, so it could be luck.`}
+    "Behaving badly" is the share of agents choosing a bad move over the last 10 of 50 steps${r.removed && r.removed.length ? `, counting only the ${r.counted} agents still present` : ''}.
+    Below the explorer: what happens in the 30 runs.</div>` + groupsHtml(r);
+};
+}
+</script>
+</body>
+</html>

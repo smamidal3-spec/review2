@@ -1,0 +1,610 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@600;700;800&family=Inter:wght@400;500;600&display=swap">
+<style>
+/* Layout: controls and a four-stage strip on top; network (left) beside the "under the hood" panel (right);
+   learned recipe, scores and charts underneath. LOOP tokens. */
+:root {
+  --bg: #FAF7F2; --card: #FFFFFF; --fg: #0F172A; --muted: #5C6657; --line: #E7E1D5; --soft: #F1EDE4;
+  --green: #006e1c; --green2: #4caf50; --greenSoft: #E8F5E9; --amber: #B45309; --amberSoft: #FDF1E2;
+  --rust: #C2410C; --rustSoft: #FBE9E1; --slate: #94A3B8; --blue: #2F6F8F; --blueSoft: #E6F0F4;
+  --a0: #006e1c; --a1: #9AA79C; --a2: #D97706; --a3: #C2410C;
+  --head: 'Plus Jakarta Sans', 'Inter', system-ui, sans-serif; --body: 'Inter', system-ui, sans-serif;
+  --shadow: 0 10px 30px rgba(10, 25, 47, 0.06);
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; background: var(--bg); color: var(--fg); font-family: var(--body); font-size: 14px; }
+button { font-family: var(--head); }
+button:focus-visible, input:focus-visible, select:focus-visible { outline: 2px solid var(--green2); outline-offset: 2px; }
+.card { background: var(--card); border: 1px solid var(--line); border-radius: 16px; box-shadow: var(--shadow); }
+.app { display: grid; gap: 12px; padding: 2px 2px 10px; }
+.muted { color: var(--muted); font-size: 12.5px; line-height: 1.5; }
+b { font-weight: 700; }
+
+/* Controls */
+.controls { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; padding: 12px 14px; }
+.btn { border: 1px solid var(--line); background: var(--card); color: var(--fg); border-radius: 999px; padding: 9px 16px;
+  font-weight: 700; font-size: 13px; cursor: pointer; transition: transform 150ms cubic-bezier(0.34, 1.56, 0.64, 1); }
+.btn:active { transform: scale(0.96); }
+.btn:hover { background: var(--soft); }
+.btn.primary { background: var(--green); border-color: var(--green); color: #fff; }
+.btn.primary:hover { background: #005a17; }
+.btn[disabled] { opacity: .45; cursor: default; }
+.stepno { font: 800 24px var(--head); letter-spacing: -.03em; font-variant-numeric: tabular-nums; }
+.stepno small { font: 500 12px var(--body); color: var(--muted); letter-spacing: 0; }
+.spacer { flex: 1; }
+.ctl { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--muted); }
+.ctl input[type=range] { width: 90px; accent-color: var(--green); }
+.toggle { display: flex; align-items: center; gap: 6px; font-size: 12.5px; cursor: pointer; }
+.toggle input { accent-color: var(--green); width: 16px; height: 16px; }
+select { border: 1px solid var(--line); border-radius: 999px; padding: 7px 10px; background: var(--card); font: 600 12.5px var(--head); color: var(--fg); }
+
+/* Stage strip: the four parts of one step */
+.stages { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; padding: 10px; }
+@media (max-width: 760px) { .stages { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.stg { border: 1px solid var(--line); border-radius: 12px; padding: 9px 11px; background: var(--card); display: grid; gap: 3px; transition: all 250ms; }
+.stg .n { display: flex; align-items: center; gap: 8px; font: 700 13.5px var(--head); }
+.stg .n i { font-style: normal; width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; font-size: 12px;
+  background: var(--soft); color: var(--muted); flex: none; }
+.stg p { margin: 0; font-size: 11.8px; color: var(--muted); line-height: 1.4; }
+.stg.done { opacity: .6; }
+.stg.done .n i { background: var(--greenSoft); color: var(--green); }
+.stg.now { border-color: var(--green); background: var(--greenSoft); box-shadow: 0 0 0 3px rgba(76,175,80,.18); }
+.stg.now .n i { background: var(--green); color: #fff; }
+
+.main { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: 12px; }
+@media (max-width: 960px) { .main { grid-template-columns: 1fr; } }
+.say { padding: 13px 15px 2px; font-size: 14px; line-height: 1.55; min-height: 64px; }
+.stage { padding: 6px 10px; }
+.stage svg { width: 100%; height: auto; display: block; }
+.legend { display: flex; flex-wrap: wrap; gap: 6px 14px; padding: 2px 15px 13px; font-size: 12px; color: var(--muted); }
+.legend span { display: inline-flex; align-items: center; gap: 6px; }
+.dot { width: 11px; height: 11px; border-radius: 50%; display: inline-block; flex: none; }
+
+/* Under the hood */
+.hood { padding: 14px 15px; display: grid; gap: 12px; align-content: start; min-width: 0; }
+.hood-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; }
+h3 { margin: 0; font: 800 16px var(--head); letter-spacing: -.01em; }
+h4 { margin: 0; font: 700 13.5px var(--head); display: flex; align-items: center; gap: 7px; }
+h4 .k { font-style: normal; width: 19px; height: 19px; border-radius: 50%; background: var(--fg); color: var(--bg); display: grid; place-items: center; font-size: 11px; flex: none; }
+.chip { display: inline-flex; align-items: center; gap: 5px; padding: 3px 9px; border-radius: 999px; font: 700 11.5px var(--head); background: var(--soft); color: var(--muted); }
+.chip.ok { background: var(--greenSoft); color: #14532D; } .chip.no { background: var(--rustSoft); color: #7C2D12; }
+.chip.blue { background: var(--blueSoft); color: var(--blue); }
+.sec { display: grid; gap: 7px; padding-top: 10px; border-top: 1px solid var(--line); }
+.sec:first-of-type { border-top: none; padding-top: 0; }
+.scroll { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; font-size: 12.3px; font-variant-numeric: tabular-nums; }
+th { text-align: right; font: 600 11px var(--body); color: var(--muted); padding: 4px 5px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+th:first-child, td:first-child { text-align: left; }
+td { text-align: right; padding: 5px 5px; border-bottom: 1px solid var(--soft); white-space: nowrap; }
+tr.pick td { background: var(--greenSoft); font-weight: 700; }
+tr.wrong td { background: var(--rustSoft); }
+.mini { display: inline-block; vertical-align: middle; height: 7px; border-radius: 999px; background: var(--blue); }
+.formula { background: var(--soft); border-radius: 10px; padding: 8px 10px; font-size: 12.3px; line-height: 1.55; }
+.formula code { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 11.8px; }
+.bars { display: grid; gap: 5px; }
+.bar-row { display: grid; grid-template-columns: 96px minmax(0, 1fr) 40px; gap: 8px; align-items: center; font-size: 12.5px; }
+.track { height: 11px; background: var(--soft); border-radius: 999px; overflow: hidden; }
+.fill { height: 100%; border-radius: 999px; transition: width 400ms ease; }
+.val { text-align: right; font-weight: 600; font-variant-numeric: tabular-nums; }
+
+/* Dice */
+.dice { position: relative; height: 34px; border-radius: 10px; overflow: hidden; display: flex; border: 1px solid var(--line); }
+.dice div { height: 100%; display: grid; place-items: center; color: #fff; font: 700 11px var(--head); overflow: hidden; white-space: nowrap; }
+.marker { position: absolute; top: -4px; bottom: -4px; width: 3px; background: var(--fg); border-radius: 2px; transition: left 1100ms cubic-bezier(.2,.9,.25,1); }
+.marker::after { content: attr(data-v); position: absolute; top: -2px; left: 6px; font: 700 10.5px var(--head); color: var(--fg); background: var(--card); padding: 0 4px; border-radius: 4px; }
+.scale { display: flex; justify-content: space-between; font-size: 10.5px; color: var(--muted); }
+
+/* Bottom row */
+.lower { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 12px; }
+@media (max-width: 960px) { .lower { grid-template-columns: 1fr; } }
+.lower .card { padding: 13px 15px; display: grid; gap: 9px; align-content: start; }
+.diverge { position: relative; height: 12px; background: var(--soft); border-radius: 999px; }
+.diverge .mid { position: absolute; left: 50%; top: -2px; bottom: -2px; width: 1px; background: var(--muted); }
+.diverge .bar { position: absolute; top: 0; height: 100%; border-radius: 999px; transition: all 500ms ease; }
+.diverge .tick { position: absolute; top: -3px; width: 3px; height: 18px; border-radius: 2px; transition: left 500ms; }
+.big { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+.big b { font: 800 28px var(--head); letter-spacing: -.03em; font-variant-numeric: tabular-nums; }
+.chart svg { width: 100%; height: 150px; display: block; }
+.foot { font-size: 11.5px; color: var(--muted); padding: 0 4px; }
+@media (prefers-reduced-motion: reduce) { .fill, .diverge .bar, .diverge .tick, .marker, .btn, .stg { transition: none; } }
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="card controls">
+    <button class="btn primary" id="next">Next: 1 Guess</button>
+    <button class="btn" id="whole">Finish this step</button>
+    <button class="btn" id="play">▶ Auto-play</button>
+    <button class="btn" id="restart">New episode</button>
+    <div class="stepno" id="stepno">Step 1 <small>of 50</small></div>
+    <div class="spacer"></div>
+    <label class="ctl" for="speed">Speed <input type="range" id="speed" min="250" max="2500" value="1200" step="50" style="direction: rtl"></label>
+    <select id="graph" aria-label="Network">
+      <option value="pre">Pre-attack network</option>
+      <option value="post">Post-attack network</option>
+    </select>
+    <label class="toggle"><input type="checkbox" id="reveal"> Reveal hidden recipe</label>
+  </div>
+
+  <div class="card stages" id="stages"></div>
+
+  <div class="main">
+    <div class="card">
+      <div class="say" id="say"></div>
+      <div class="stage"><svg id="net" role="img" aria-label="Network of 28 agents"></svg></div>
+      <div class="legend" id="legend"></div>
+    </div>
+    <div class="card hood" id="hood"></div>
+  </div>
+
+  <div class="lower">
+    <div class="card">
+      <h4>What the computer believes about the agents <span class="chip" id="watched">watched 0 moves</span></h4>
+      <div class="bars" id="recipe"></div>
+      <div class="muted" id="recipeNote"></div>
+    </div>
+    <div class="card">
+      <h4>Scoreboard</h4>
+      <div class="big"><b id="score">0 / 0</b><span class="muted" id="scoreTxt">guesses right so far</span></div>
+      <div class="bars">
+        <div class="bar-row"><span>Computer</span><div class="track"><div class="fill" id="accFill" style="background:var(--green);width:0"></div></div><span class="val" id="accAll">–</span></div>
+        <div class="bar-row"><span>Knew recipe</span><div class="track"><div class="fill" id="ceilFill" style="background:var(--slate);width:0"></div></div><span class="val" id="ceil">–</span></div>
+      </div>
+      <div class="muted">"Knew recipe" is a pretend player who is told the secret odds and always guesses the most likely move. Because agents roll dice, even it gets many wrong. The computer has done its job when it scores about the same.</div>
+    </div>
+    <div class="card chart"><h4>How many agents are behaving badly</h4><svg id="badChart"></svg></div>
+    <div class="card chart"><h4>How often guesses are right, step by step</h4><svg id="accChart"></svg></div>
+  </div>
+  <div class="foot" id="foot"></div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/d3@7.9.0/dist/d3.min.js"></script>
+<script>
+const send = (type, extra) => window.parent.postMessage(Object.assign({ isStreamlitMessage: true, type }, extra || {}), '*');
+let sentH = 0;
+const setHeight = () => {
+  const h = Math.ceil(document.body.getBoundingClientRect().height) + 4;
+  if (h > 20 && h !== sentH) { sentH = h; send('streamlit:setFrameHeight', { height: h }); }  // 0 while the tab is hidden
+};
+setInterval(setHeight, 500);
+let D = null, P = null;
+window.addEventListener('message', ev => {
+  if (!ev.data || ev.data.type !== 'streamlit:render' || D) return;
+  D = ev.data.args.data; P = D.params; main(); setHeight();
+});
+new ResizeObserver(setHeight).observe(document.body);
+send('streamlit:componentReady', { apiVersion: 1 });
+
+function main() {
+const N = D.labels.length, A = 4;
+const NAMES = ['good', 'neutral', 'a bit bad', 'very bad'];
+const ACOL = ['var(--a0)', 'var(--a1)', 'var(--a2)', 'var(--a3)'];
+const MOT = ['Fitting in', 'Money', 'Status', 'Risk of getting caught'];
+const MOT_LONG = ['Fitting in with friends', 'Money from the act', 'Status from the act', 'Risk of getting caught'];
+const BAD = new Set(P.bad);
+const pct = v => `${Math.round(v * 100)}%`, f2 = v => (v >= 0 ? '+' : '') + v.toFixed(2), sw = a => `<i class="dot" style="background:${ACOL[a]}"></i>`;
+const act = a => `<b style="color:${ACOL[a]}">${NAMES[a]}</b>`;
+document.getElementById('foot').textContent = D.disclaimer + ' The agents here are simulated live in your browser with the same rules as the Python model.';
+
+const STAGES = [
+  ['Guess', 'The computer predicts every agent’s move, using only what it has learned so far.'],
+  ['Move', 'Each agent rolls weighted dice. The weights come from the hidden recipe the computer cannot see.'],
+  ['Check', 'Each guess is compared with what really happened and scored.'],
+  ['Learn', 'The computer adjusts its beliefs so the moves it has seen look more likely.'],
+];
+
+// ---------------------------------------------------------------- network
+const idx = Object.fromEntries(D.labels.map((l, i) => [l, i]));
+function buildGraph(kind) {
+  const nb = Array.from({ length: N }, () => []), kin = Array.from({ length: N }, () => new Map());
+  D.edges.forEach(e => {
+    if (kind === 'post' && !e.post) return;
+    const i = idx[e.agent_i], j = idx[e.agent_j];
+    nb[i].push(j); nb[j].push(i); kin[i].set(j, e.kin); kin[j].set(i, e.kin);
+  });
+  return { nb, kin };
+}
+const PRE = buildGraph('pre');
+function groups(g) {
+  const seen = new Array(N).fill(false), out = [];
+  for (let s = 0; s < N; s++) {
+    if (seen[s]) continue;
+    const comp = [], st = [s]; seen[s] = true;
+    while (st.length) { const u = st.pop(); comp.push(u); g.nb[u].forEach(v => { if (!seen[v]) { seen[v] = true; st.push(v); } }); }
+    out.push(comp.sort((a, b) => a - b));
+  }
+  return out;
+}
+const PRE_GROUPS = groups(PRE).filter(c => c.length > 1);
+
+// ---------------------------------------------------------------- model maths (same rules as features.py / simulator.py)
+function observe(g, i, st) {
+  const js = g.nb[i];
+  const md = js.length ? js.reduce((s, j) => s + st.dev[j], 0) / js.length : 0;
+  return { i, nb: js.map(j => ({ j, status: D.status[j], kin: g.kin[i].get(j) ? 1 : 0, last: st.last[j], dev: st.dev[j] })), md, sup: st.sup[i] };
+}
+function features(o, gs, gk) {
+  let al = [];
+  if (o.nb.length) {
+    const sc = o.nb.map(n => gs * n.status + gk * n.kin), m = Math.max(...sc), e = sc.map(s => Math.exp(s - m)), z = e.reduce((a, b) => a + b, 0);
+    al = e.map(x => x / z);
+  }
+  const phi = [];
+  for (let a = 0; a < A; a++) {
+    let pa = 0; o.nb.forEach((n, k) => { pa += al[k] * (1 - Math.abs(P.level[a] - P.level[n.last])); });
+    phi.push([pa, P.material[a], P.severity[a] * o.md, P.severity[a] * o.sup]);
+  }
+  return { phi, al };
+}
+const scores = (phi, th) => phi.map(f => P.beta * (f[0] * th[0] + f[1] * th[1] + f[2] * th[2] + f[3] * th[3]));
+function softmax(u) { const m = Math.max(...u), e = u.map(x => Math.exp(x - m)), z = e.reduce((a, b) => a + b, 0); return e.map(x => x / z); }
+const argmax = v => v.indexOf(Math.max(...v));
+
+// ---------------------------------------------------------------- the computer: learns by watching (maximum likelihood with Adam)
+const L = { p: [0, 0, 0, 0, 1, 0], m: new Array(6).fill(0), v: new Array(6).fill(0), t: 0, obs: [] };
+function logLik(p, obs) {
+  let ll = 0; const th = p.slice(0, 4), g = [0, 0, 0, 0];
+  for (const o of obs) {
+    const { phi } = features(o, p[4], p[5]), pr = softmax(scores(phi, th));
+    ll += Math.log(Math.max(pr[o.a], 1e-300));
+    for (let k = 0; k < 4; k++) { let ex = 0; for (let a = 0; a < A; a++) ex += pr[a] * phi[a][k]; g[k] += P.beta * (phi[o.a][k] - ex); }
+  }
+  return { ll, g };
+}
+function learn(iters) {
+  const n = L.obs.length; if (!n) return;
+  for (let it = 0; it < iters; it++) {
+    const base = logLik(L.p, L.obs), grad = base.g.slice();
+    for (const k of [4, 5]) { const q = L.p.slice(); q[k] += 1e-3; grad.push((logLik(q, L.obs).ll - base.ll) / 1e-3); }
+    L.t++;
+    for (let k = 0; k < 6; k++) {
+      const gk = grad[k] / n;
+      L.m[k] = 0.9 * L.m[k] + 0.1 * gk; L.v[k] = 0.999 * L.v[k] + 0.001 * gk * gk;
+      L.p[k] += 0.05 * (L.m[k] / (1 - 0.9 ** L.t)) / (Math.sqrt(L.v[k] / (1 - 0.999 ** L.t)) + 1e-8);
+    }
+  }
+}
+const avgChance = (p, obs) => obs.reduce((s, o) => s + softmax(scores(features(o, p[4], p[5]).phi, p.slice(0, 4)))[o.a], 0) / obs.length;
+
+// ---------------------------------------------------------------- episode state
+let rng;
+function mulberry(a) { return () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+const U = r => r[0] + (r[1] - r[0]) * rng();
+let G = PRE, S, episode = 1, focus = idx['A11'];
+const hist = { bad: [], acc: [], ceil: [], right: 0, oracle: 0, total: 0 };
+let cur = null;   // everything about the step in progress
+// stage: 0 = waiting to guess, 1 = guessed, 2 = moved, 3 = checked, 4 = learned (step complete)
+let stage = 0;
+
+function newEpisode() {
+  rng = mulberry(1000 + episode * 7919);
+  const sup = [], sc = [], dev = [];
+  for (let i = 0; i < N; i++) sup.push(U(P.supRange));
+  for (let i = 0; i < N; i++) sc.push(U(P.scRange));
+  for (let i = 0; i < N; i++) dev.push(U(P.devRange));
+  PRE_GROUPS.forEach(c => { dev[c[Math.floor(rng() * c.length)]] = P.seedDev; });
+  S = { t: 0, sup, sc, dev, last: dev.map(d => d > 0.5 ? 3 : 1) };
+  L.p = [0, 0, 0, 0, 1, 0]; L.m.fill(0); L.v.fill(0); L.t = 0; L.obs = [];
+  Object.assign(hist, { bad: [], acc: [], ceil: [], right: 0, oracle: 0, total: 0 });
+  cur = null; stage = 0;
+  render();
+}
+
+function doGuess() {
+  const lp = L.p.slice(), obs = [], g = [];
+  for (let i = 0; i < N; i++) {
+    const o = observe(G, i, S); obs.push(o);
+    const f = features(o, lp[4], lp[5]), sc = scores(f.phi, lp.slice(0, 4)), pr = softmax(sc);
+    g.push({ f, sc, pr, guess: argmax(pr) });
+  }
+  cur = { prevLast: S.last.slice(), prevDev: S.dev.slice(), params: lp, obs, g };
+  stage = 1;
+}
+function doMove() {
+  const th = P.thetaTrue, tg = P.gammaTrue, tr = [], u = [], a = [];
+  for (let i = 0; i < N; i++) tr.push(softmax(scores(features(cur.obs[i], tg.gamma_status, tg.gamma_kin).phi, th)));
+  for (let i = 0; i < N; i++) {            // one dice roll per agent, in agent order
+    const x = rng(); let c = 0, k = 0;
+    for (; k < A - 1; k++) { c += tr[i][k]; if (x < c) break; }
+    u.push(x); a.push(k);
+  }
+  for (let i = 0; i < N; i++) S.dev[i] = Math.min(1, Math.max(0, S.dev[i] + P.kappa * (1 - 0.5 * S.sc[i]) * (P.severity[a[i]] - S.dev[i])));
+  S.last = a; S.t++;
+  Object.assign(cur, { tr, u, a });
+  stage = 2;
+}
+function doCheck() {
+  const right = cur.g.map((g, i) => g.guess === cur.a[i]);
+  const oracle = cur.tr.map((p, i) => argmax(p) === cur.a[i]);
+  Object.assign(cur, { right, oracle });
+  const r = right.filter(Boolean).length, o = oracle.filter(Boolean).length;
+  hist.right += r; hist.oracle += o; hist.total += N;
+  hist.acc.push(r / N); hist.ceil.push(o / N); hist.bad.push(cur.a.filter(x => BAD.has(x)).length / N);
+  stage = 3;
+}
+function doLearn() {
+  cur.obs.forEach((o, i) => { o.a = cur.a[i]; L.obs.push(o); });
+  const before = L.p.slice(), chanceBefore = avgChance(before, cur.obs);
+  learn(S.t < 5 ? 80 : 40);
+  Object.assign(cur, { before, after: L.p.slice(), chanceBefore, chanceAfter: avgChance(L.p, cur.obs) });
+  stage = 4;
+}
+function advance() {
+  if (stage === 4 || stage === 0) { if (S.t >= P.steps) { setPlaying(false); return; } doGuess(); }
+  else if (stage === 1) doMove();
+  else if (stage === 2) doCheck();
+  else if (stage === 3) doLearn();
+  render();
+}
+
+// ---------------------------------------------------------------- network drawing
+const svg = d3.select('#net');
+const xs = D.labels.map(l => D.pos[l][0]), ys = D.labels.map(l => D.pos[l][1]);
+const SC = 105, pad = 64;
+const minX = Math.min(...xs) * SC - pad, maxX = Math.max(...xs) * SC + pad, minY = -Math.max(...ys) * SC - pad, maxY = -Math.min(...ys) * SC + pad;
+svg.attr('viewBox', `${minX} ${minY} ${maxX - minX} ${maxY - minY}`);
+const px = i => D.pos[D.labels[i]][0] * SC, py = i => -D.pos[D.labels[i]][1] * SC;
+const defs = svg.append('defs');
+defs.append('marker').attr('id', 'arrow').attr('viewBox', '0 0 10 10').attr('refX', 8).attr('refY', 5).attr('markerWidth', 5).attr('markerHeight', 5)
+  .attr('orient', 'auto-start-reverse').append('path').attr('d', 'M0,0L10,5L0,10z').attr('fill', 'var(--blue)');
+const gE = svg.append('g'), gArrow = svg.append('g'), gN = svg.append('g');
+const R = i => 13 + 1.7 * D.degree[i];
+
+function drawNetwork() {
+  const edges = D.edges.filter(e => G === PRE || e.post);
+  gE.selectAll('line').data(edges, e => e.agent_i + e.agent_j).join('line')
+    .attr('x1', e => px(idx[e.agent_i])).attr('y1', e => py(idx[e.agent_i])).attr('x2', e => px(idx[e.agent_j])).attr('y2', e => py(idx[e.agent_j]))
+    .attr('stroke', 'var(--line)').attr('stroke-width', 3);
+  const nodes = gN.selectAll('g.n').data(d3.range(N)).join(enter => {
+    const g = enter.append('g').attr('class', 'n').style('cursor', 'pointer').on('click', (ev, i) => { focus = i; render(); });
+    g.append('circle').attr('class', 'ring');
+    g.append('circle').attr('class', 'body');
+    g.append('text').attr('class', 'lab');
+    const b = g.append('g').attr('class', 'badge');
+    b.append('circle').attr('r', 9.5);
+    b.append('text').attr('text-anchor', 'middle').attr('dy', 4).attr('font-size', 12).attr('font-weight', 800).attr('fill', '#fff').text('?');
+    return g;
+  });
+  nodes.attr('transform', i => `translate(${px(i)},${py(i)})`);
+  // body colour: the agent's latest move (before stage 2 that is last step's move)
+  const showLast = stage >= 2 ? S.last : (cur ? cur.prevLast : S.last);
+  nodes.select('.body').attr('r', R).attr('fill', i => ACOL[showLast[i]])
+    .attr('stroke', i => i === focus ? 'var(--fg)' : 'var(--card)').attr('stroke-width', i => i === focus ? 4.5 : 2)
+    .attr('opacity', i => stage === 1 ? 0.55 : 1);
+  // ring: right or wrong after the check
+  nodes.select('.ring').attr('r', i => R(i) + 6).attr('fill', 'none')
+    .attr('stroke', i => stage >= 3 ? (cur.right[i] ? 'var(--green)' : 'var(--rust)') : 'none')
+    .attr('stroke-dasharray', i => stage >= 3 && !cur.right[i] ? '4 3' : null).attr('stroke-width', 3);
+  // badge: the computer's guess, shown from stage 1 on
+  nodes.select('.badge').attr('transform', i => `translate(${R(i) * 0.78},${-R(i) * 0.78})`)
+    .attr('display', stage >= 1 ? null : 'none');
+  nodes.select('.badge circle').attr('fill', i => cur ? ACOL[cur.g[i].guess] : 'none').attr('stroke', 'var(--card)').attr('stroke-width', 2);
+  nodes.select('.lab').text(i => D.labels[i]).attr('text-anchor', 'middle').attr('dy', i => -R(i) - 11)
+    .attr('font-family', 'Plus Jakarta Sans, Inter, sans-serif').attr('font-weight', 700).attr('font-size', 15).attr('fill', 'var(--fg)');
+  if (stage === 2 && !matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    nodes.select('.body').attr('r', i => R(i) * 0.3).transition().delay(i => i * 25).duration(380).attr('r', R);
+  }
+  // arrows into the focused agent: how much it listens to each friend (thickness = computer's listening weight)
+  gArrow.selectAll('*').remove();
+  if (cur && stage >= 1) {
+    const o = cur.obs[focus], al = cur.g[focus].f.al;
+    o.nb.forEach((n, k) => {
+      const j = n.j, dx = px(focus) - px(j), dy = py(focus) - py(j), Ln = Math.hypot(dx, dy) || 1;
+      gArrow.append('line').attr('x1', px(j) + dx / Ln * (R(j) + 4)).attr('y1', py(j) + dy / Ln * (R(j) + 4))
+        .attr('x2', px(focus) - dx / Ln * (R(focus) + 12)).attr('y2', py(focus) - dy / Ln * (R(focus) + 12))
+        .attr('stroke', 'var(--blue)').attr('stroke-width', 2 + 9 * al[k]).attr('opacity', 0.35 + 0.65 * al[k])
+        .attr('marker-end', 'url(#arrow)');
+    });
+  }
+}
+
+// ---------------------------------------------------------------- narration
+function renderStages() {
+  document.getElementById('stages').innerHTML = STAGES.map(([t, d], k) => {
+    const cls = stage === k + 1 ? 'now' : (stage > k + 1 ? 'done' : '');
+    return `<div class="stg ${cls}"><div class="n"><i>${stage > k + 1 ? '✓' : k + 1}</i>${t}</div><p>${d}</p></div>`;
+  }).join('');
+  const step = stage === 0 || stage === 4 ? Math.min(S.t + 1, P.steps) : S.t + (stage === 1 ? 1 : 0);
+  document.getElementById('stepno').innerHTML = `Step ${S.t >= P.steps && (stage === 4 || stage === 0) ? P.steps : step} <small>of ${P.steps}</small>`;
+  const nextLabel = { 0: '1 Guess', 1: '2 Move', 2: '3 Check', 3: '4 Learn', 4: 'next step: 1 Guess' }[stage];
+  const nb = document.getElementById('next');
+  nb.textContent = S.t >= P.steps && stage === 4 ? 'Episode finished' : `Next: ${nextLabel}`;
+  nb.disabled = S.t >= P.steps && stage === 4;
+  document.getElementById('whole').disabled = stage === 4 || stage === 0;
+}
+
+function renderSay() {
+  const el = document.getElementById('say'), n = D.labels[focus];
+  if (!cur || stage === 0) {
+    el.innerHTML = S.t === 0
+      ? `<b>Ready.</b> 28 simulated agents sit on the real network. Their colour is their last move; a few start out very bad. ` +
+        `Press <b>Next: 1 Guess</b> to begin. We follow <b>${n}</b> in the panel on the right; click any agent to follow it instead.`
+      : `Press <b>Next</b> to start step ${S.t + 1}.`;
+    return;
+  }
+  const c = [0, 0, 0, 0]; S.last.forEach(a => c[a]++);
+  const gc = [0, 0, 0, 0]; cur.g.forEach(g => gc[g.guess]++);
+  const r = stage >= 3 ? cur.right.filter(Boolean).length : 0;
+  el.innerHTML = ({
+    1: () => `<b>1 Guess.</b> The little badge on each agent is the computer's prediction of its next move ` +
+       `(${gc.map((v, a) => v ? `${v} ${NAMES[a]}` : '').filter(Boolean).join(', ')}). Blue arrows show who <b>${n}</b> is listening to: thicker means more. ` +
+       `Nobody has moved yet; the faded colours are last step's moves.`,
+    2: () => `<b>2 Move.</b> Every agent rolled its dice and moved: ${c.map((v, a) => `${v} ${NAMES[a]}`).join(', ')}. ` +
+       `Compare each new colour with its badge to see whether the guess was right.`,
+    3: () => `<b>3 Check.</b> The computer guessed <b>${r} of 28</b> right this step. Solid green ring = right, dashed red ring = wrong. ` +
+       `The pretend player who knows the secret odds got ${cur.oracle.filter(Boolean).length} of 28.`,
+    4: () => `<b>4 Learn.</b> The computer added these 28 moves to the ${(L.obs.length - N).toLocaleString()} it had already seen and adjusted its beliefs ` +
+       `(bottom left). Before learning it gave the real moves an average chance of ${pct(cur.chanceBefore)}; after learning, ${pct(cur.chanceAfter)}.`,
+  })[stage]();
+}
+
+// ---------------------------------------------------------------- under the hood (follows one agent)
+function renderHood() {
+  const el = document.getElementById('hood'), n = D.labels[focus];
+  const head = (title, chip) => `<div class="hood-head"><h3>Under the hood: ${n}</h3>${chip || ''}</div><div class="muted">${title}</div>`;
+  if (!cur || stage === 0) {
+    el.innerHTML = head('Click any agent to follow it. Each stage of the step will show the exact numbers the computer and the simulation use for this agent.') +
+      `<div class="sec"><h4>Who ${n} is connected to</h4><div class="muted">${G.nb[focus].length
+        ? G.nb[focus].map(j => `${D.labels[j]} (last move ${act(S.last[j])})`).join(', ')
+        : 'Nobody in this network, so only its own situation matters.'}</div></div>`;
+    return;
+  }
+  const o = cur.obs[focus], g = cur.g[focus], lp = cur.params;
+  if (stage === 1) {
+    const nbRows = o.nb.map((x, k) => `<tr><td>${D.labels[x.j]}</td><td>${sw(x.last)} ${NAMES[x.last]}</td><td>${x.status.toFixed(2)}</td><td>${x.kin ? 'yes' : 'no'}</td>
+      <td><span class="mini" style="width:${Math.round(g.f.al[k] * 60)}px"></span> ${pct(g.f.al[k])}</td></tr>`).join('');
+    const opt = NAMES.map((nm, a) => {
+      const ph = g.f.phi[a];
+      return `<tr class="${a === g.guess ? 'pick' : ''}"><td>${sw(a)} ${nm}</td>${ph.map(v => `<td>${v.toFixed(2)}</td>`).join('')}<td>${g.sc[a].toFixed(2)}</td><td>${pct(g.pr[a])}</td></tr>`;
+    }).join('');
+    el.innerHTML = head(`Stage 1: how the computer turns what it can see into a guess for ${n}.`, `<span class="chip blue">guess: ${NAMES[g.guess]}</span>`) +
+      `<div class="sec"><h4><i class="k">a</i>What the computer can see</h4>
+        <div class="muted">How closely ${n} is watched by the authorities: <b>${o.sup.toFixed(2)}</b> (0 = not at all, 1 = constantly).
+        Average badness of its friends so far: <b>${o.md.toFixed(2)}</b>.</div>
+        ${o.nb.length ? `<div class="scroll"><table><tr><th>Friend</th><th>Last move</th><th>Importance</th><th>Family</th><th>How much ${n} listens</th></tr>${nbRows}</table></div>
+        <div class="muted">"How much ${n} listens" comes from the computer's current belief: agents listen more to important people (weight ${lp[4].toFixed(2)}) and to family (weight ${lp[5].toFixed(2)}).</div>`
+        : `<div class="muted">${n} has no friends in this network.</div>`}</div>
+      <div class="sec"><h4><i class="k">b</i>Score every possible move</h4>
+        <div class="muted">For each move the computer measures four things, each from 0 to 1:</div>
+        <div class="scroll"><table><tr><th>Move</th><th>Fitting in</th><th>Money</th><th>Status</th><th>Risk</th><th>Score</th><th>Chance</th></tr>
+        <tr><td class="muted">computer's weights</td>${lp.slice(0, 4).map(v => `<td class="muted">× ${f2(v)}</td>`).join('')}<td></td><td></td></tr>${opt}</table></div>
+        <div class="formula">Score = 5 × (fitting in × ${f2(lp[0])} + money × ${f2(lp[1])} + status × ${f2(lp[2])} + risk × ${f2(lp[3])})<br>
+        <span class="muted">Fitting in = how close the move is to what the friends ${n} listens to did last step. Risk = how bad the move is × how closely ${n} is watched.</span></div></div>
+      <div class="sec"><h4><i class="k">c</i>Turn scores into chances, pick the highest</h4>
+        <div class="muted">Higher scores get bigger chances (each score is turned into a share of 100%). The computer's guess is simply the move with the biggest chance:
+        ${act(g.guess)} at ${pct(g.pr[g.guess])}.${L.obs.length === 0 ? ' It has not watched anything yet, so all weights are 0 and every move gets 25%.' : ''}</div></div>`;
+  } else if (stage === 2) {
+    const tr = cur.tr[focus], u = cur.u[focus], a = cur.a[focus];
+    const reveal = document.getElementById('reveal').checked;
+    let acc = 0;
+    const segs = tr.map((p, k) => { const s = `<div style="width:${p * 100}%;background:${ACOL[k]}" title="${NAMES[k]} ${pct(p)}">${p > 0.09 ? pct(p) : ''}</div>`; acc += p; return s; }).join('');
+    el.innerHTML = head(`Stage 2: the simulation decides ${n}'s real move. The computer does not see any of this; it only sees the result.`, `<span class="chip">moved: ${NAMES[a]}</span>`) +
+      `<div class="sec"><h4><i class="k">a</i>The secret odds</h4>
+        <div class="muted">The simulation scores the same four things, but with the <b>hidden recipe</b>${reveal
+          ? ` (fitting in ${f2(P.thetaTrue[0])}, money ${f2(P.thetaTrue[1])}, status ${f2(P.thetaTrue[2])}, risk ${f2(P.thetaTrue[3])})`
+          : ' (tick "Reveal hidden recipe" to see it)'}. That gives ${n} these odds:</div>
+        <div class="bars">${NAMES.map((nm, k) => `<div class="bar-row"><span>${sw(k)} ${nm}</span><div class="track"><div class="fill" style="background:${ACOL[k]};width:${tr[k] * 100}%"></div></div><span class="val">${pct(tr[k])}</span></div>`).join('')}</div></div>
+      <div class="sec"><h4><i class="k">b</i>Roll the dice</h4>
+        <div class="muted">Lay the odds side by side from 0 to 1 and drop a random number between 0 and 1. Whichever colour it lands on is the move.</div>
+        <div class="dice">${segs}<span class="marker" id="marker" data-v="${u.toFixed(2)}" style="left:0%"></span></div>
+        <div class="scale"><span>0</span><span>0.5</span><span>1</span></div>
+        <div class="muted">The number was <b>${u.toFixed(2)}</b>, which lands on ${act(a)}. That is why even a perfect guesser is sometimes wrong: unlikely moves still happen.</div></div>`;
+    requestAnimationFrame(() => requestAnimationFrame(() => { const m = document.getElementById('marker'); if (m) m.style.left = `calc(${u * 100}% - 1.5px)`; }));
+  } else if (stage === 3) {
+    const ok = cur.right[focus], a = cur.a[focus], oc = cur.oracle[focus];
+    const rows = NAMES.map((nm, k) => `<tr class="${k === a ? (ok ? 'pick' : 'wrong') : ''}"><td>${sw(k)} ${nm}</td><td>${pct(g.pr[k])}</td><td>${pct(cur.tr[focus][k])}</td><td>${k === a ? 'happened' : ''}</td></tr>`).join('');
+    el.innerHTML = head(`Stage 3: was the guess for ${n} right?`, `<span class="chip ${ok ? 'ok' : 'no'}">${ok ? 'right' : 'wrong'}</span>`) +
+      `<div class="sec"><h4><i class="k">a</i>Guess vs reality</h4>
+        <div style="font-size:13.5px">The computer guessed ${act(g.guess)}; ${n} actually did ${act(a)}.</div>
+        <div class="scroll"><table><tr><th>Move</th><th>Computer's chance</th><th>Secret odds</th><th></th></tr>${rows}</table></div>
+        <div class="muted">The pretend player who knows the secret odds would have guessed ${act(argmax(cur.tr[focus]))} and been <b>${oc ? 'right' : 'wrong'}</b>.</div></div>
+      <div class="sec"><h4><i class="k">b</i>The whole network this step</h4>
+        <div class="muted">Computer: <b>${cur.right.filter(Boolean).length} of 28</b> right. Pretend player with the secret odds: <b>${cur.oracle.filter(Boolean).length} of 28</b>.
+        The scoreboard at the bottom keeps the running totals.</div></div>`;
+  } else if (stage === 4) {
+    const b = cur.before, af = cur.after;
+    const rows = MOT_LONG.map((m, k) => `<tr><td>${m}</td><td>${f2(b[k])}</td><td>${f2(af[k])}</td><td style="color:${af[k] - b[k] >= 0 ? 'var(--rust)' : 'var(--green)'}">${f2(af[k] - b[k])}</td></tr>`).join('') +
+      `<tr><td>Listens to important people</td><td>${b[4].toFixed(2)}</td><td>${af[4].toFixed(2)}</td><td>${f2(af[4] - b[4])}</td></tr>` +
+      `<tr><td>Listens to family</td><td>${b[5].toFixed(2)}</td><td>${af[5].toFixed(2)}</td><td>${f2(af[5] - b[5])}</td></tr>`;
+    el.innerHTML = head('Stage 4: the computer updates its beliefs using every move it has watched so far.', `<span class="chip blue">${L.obs.length.toLocaleString()} moves watched</span>`) +
+      `<div class="sec"><h4><i class="k">a</i>What changed</h4>
+        <div class="scroll"><table><tr><th>Belief</th><th>Before</th><th>After</th><th>Change</th></tr>${rows}</table></div>
+        <div class="muted">Positive weights mean "this pushes agents towards bad moves"; negative means "this holds them back".</div></div>
+      <div class="sec"><h4><i class="k">b</i>How it decides what to change</h4>
+        <div class="muted">The computer tries many small adjustments and keeps the ones that make the moves it has actually seen look more likely.
+        A good set of beliefs is one under which reality is not surprising.</div>
+        <div class="bars">
+          <div class="bar-row"><span>Before</span><div class="track"><div class="fill" style="background:var(--slate);width:${cur.chanceBefore * 100}%"></div></div><span class="val">${pct(cur.chanceBefore)}</span></div>
+          <div class="bar-row"><span>After</span><div class="track"><div class="fill" style="background:var(--green);width:${cur.chanceAfter * 100}%"></div></div><span class="val">${pct(cur.chanceAfter)}</span></div>
+        </div>
+        <div class="muted">Average chance the computer gave to the 28 moves that really happened this step. Pure guessing would give 25%.</div></div>`;
+  }
+}
+
+// ---------------------------------------------------------------- learned recipe, scoreboard, charts
+function renderRecipe() {
+  const reveal = document.getElementById('reveal').checked, lim = 1;
+  const old = stage === 4 && cur ? cur.before : null;
+  document.getElementById('recipe').innerHTML = MOT_LONG.map((m, k) => {
+    const v = L.p[k], c = Math.max(-lim, Math.min(lim, v)) / lim * 50;
+    const tick = (val, color, title) => `<div class="tick" title="${title}" style="background:${color};left:calc(${50 + Math.max(-lim, Math.min(lim, val)) / lim * 50}% - 1.5px)"></div>`;
+    return `<div class="bar-row" style="grid-template-columns:150px minmax(0,1fr) 44px"><span>${m}</span><div class="diverge"><div class="mid"></div>
+      <div class="bar" style="background:${v < 0 ? 'var(--green)' : 'var(--rust)'};left:${c < 0 ? 50 + c : 50}%;width:${Math.abs(c)}%"></div>
+      ${old ? tick(old[k], 'var(--slate)', 'before this step') : ''}${reveal ? tick(P.thetaTrue[k], 'var(--fg)', 'hidden truth') : ''}</div><span class="val">${f2(v)}</span></div>`;
+  }).join('');
+  document.getElementById('watched').textContent = `watched ${L.obs.length.toLocaleString()} moves`;
+  const th = L.p.slice(0, 4), tt = P.thetaTrue, na = Math.hypot(...th), nb = Math.hypot(...tt);
+  const match = na ? Math.max(0, th.reduce((s, v, k) => s + v * tt[k], 0) / na / nb) : 0;
+  document.getElementById('recipeNote').innerHTML =
+    `Bars to the right push agents towards bad moves; bars to the left hold them back. ` +
+    (old ? 'Grey ticks show where each bar was before this step’s learning. ' : '') +
+    (reveal ? `Black ticks are the <b>hidden recipe</b>, which the computer never sees. Match so far: <b>${pct(match)}</b>.`
+            : 'Tick <b>Reveal hidden recipe</b> to compare these beliefs with the truth.');
+}
+function renderScore() {
+  const t = hist.total;
+  document.getElementById('score').textContent = `${hist.right} / ${t}`;
+  document.getElementById('accAll').textContent = t ? pct(hist.right / t) : '–';
+  document.getElementById('ceil').textContent = t ? pct(hist.oracle / t) : '–';
+  document.getElementById('accFill').style.width = t ? `${hist.right / t * 100}%` : '0';
+  document.getElementById('ceilFill').style.width = t ? `${hist.oracle / t * 100}%` : '0';
+}
+function lineChart(id, series) {
+  const el = d3.select('#' + id); el.selectAll('*').remove();
+  const w = el.node().clientWidth || 400, h = 150, m = { l: 34, r: 10, t: 8, b: 22 };
+  el.attr('viewBox', `0 0 ${w} ${h}`);
+  const x = d3.scaleLinear([0, P.steps], [m.l, w - m.r]), y = d3.scaleLinear([0, 1], [h - m.b, m.t]);
+  [0, .25, .5, .75, 1].forEach(v => {
+    el.append('line').attr('x1', m.l).attr('x2', w - m.r).attr('y1', y(v)).attr('y2', y(v)).attr('stroke', 'var(--soft)');
+    el.append('text').attr('x', m.l - 6).attr('y', y(v) + 4).attr('text-anchor', 'end').attr('font-size', 10).attr('fill', 'var(--muted)').text(pct(v));
+  });
+  [0, 10, 20, 30, 40, 50].forEach(v => el.append('text').attr('x', x(v)).attr('y', h - 6).attr('text-anchor', 'middle').attr('font-size', 10).attr('fill', 'var(--muted)').text(v));
+  series.forEach(s => {
+    if (!s.data.length) return;
+    const pts = s.data.map((v, k) => [x(k + 1), y(v)]);
+    if (s.area) el.append('path').attr('d', d3.area().x(p => p[0]).y0(y(0)).y1(p => p[1])(pts)).attr('fill', s.color).attr('opacity', 0.12);
+    el.append('path').attr('d', d3.line()(pts)).attr('fill', 'none').attr('stroke', s.color).attr('stroke-width', 2.5).attr('stroke-dasharray', s.dash || null);
+    const lp = pts[pts.length - 1];
+    el.append('circle').attr('cx', lp[0]).attr('cy', lp[1]).attr('r', 4).attr('fill', s.color);
+    if (s.label) el.append('text').attr('x', Math.min(lp[0] + 6, w - 90)).attr('y', lp[1] - 7).attr('font-size', 11).attr('font-weight', 600).attr('fill', s.color).text(s.label);
+  });
+}
+function renderCharts() {
+  lineChart('badChart', [{ data: hist.bad, color: 'var(--rust)', area: true, label: hist.bad.length ? `${pct(hist.bad.at(-1))} bad` : '' }]);
+  lineChart('accChart', [{ data: hist.ceil, color: 'var(--slate)', dash: '4 4', label: 'knew recipe' }, { data: hist.acc, color: 'var(--green)', label: 'computer' }]);
+}
+document.getElementById('legend').innerHTML = NAMES.map((n, a) => `<span>${sw(a)}${n}</span>`).join('') +
+  `<span><svg width="18" height="18" viewBox="0 0 18 18"><circle cx="9" cy="9" r="7" fill="var(--a3)" stroke="#fff" stroke-width="2"/><text x="9" y="13" text-anchor="middle" font-size="10" font-weight="800" fill="#fff">?</text></svg>computer's guess</span>` +
+  `<span><i class="dot" style="background:var(--card);border:2.5px solid var(--green)"></i>guess right</span>` +
+  `<span><i class="dot" style="background:var(--card);border:2.5px dashed var(--rust)"></i>guess wrong</span>` +
+  `<span><svg width="22" height="10"><line x1="1" y1="5" x2="20" y2="5" stroke="var(--blue)" stroke-width="4"/></svg>who the followed agent listens to</span>`;
+
+function render() { renderStages(); drawNetwork(); renderSay(); renderHood(); renderRecipe(); renderScore(); renderCharts(); }
+
+// ---------------------------------------------------------------- controls
+let timer = null;
+const playBtn = document.getElementById('play');
+function setPlaying(on) {
+  clearInterval(timer); timer = null;
+  playBtn.textContent = on ? '❚❚ Pause' : '▶ Auto-play';
+  if (on) {
+    if (S.t >= P.steps && stage === 4) newEpisode();
+    timer = setInterval(() => { if (S.t >= P.steps && stage === 4) { setPlaying(false); return; } advance(); }, +document.getElementById('speed').value);
+  }
+}
+playBtn.onclick = () => setPlaying(!timer);
+document.getElementById('next').onclick = () => { setPlaying(false); advance(); };
+document.getElementById('whole').onclick = () => { setPlaying(false); while (stage !== 4) advance(); };
+document.getElementById('restart').onclick = () => { setPlaying(false); episode++; newEpisode(); };
+document.getElementById('speed').oninput = () => { if (timer) setPlaying(true); };
+document.getElementById('reveal').onchange = () => { renderRecipe(); renderHood(); };
+document.getElementById('graph').onchange = e => { setPlaying(false); G = e.target.value === 'post' ? buildGraph('post') : PRE; newEpisode(); };
+window.addEventListener('resize', renderCharts);
+newEpisode();
+}
+</script>
+</body>
+</html>

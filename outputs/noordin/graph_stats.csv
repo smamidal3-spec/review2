@@ -1,0 +1,25 @@
+stat,value
+nodes,28
+ties,38
+mutual_pairs,29
+group_sizes,"15, 8, 5"
+groups,3
+isolates,0
+max_degree,10
+highest_degree_agent,A11 (degree 10)
+second_highest_degree_agent,A07 (degree 6)
+average_degree,2.714
+hub_share,0.263
+tie_feature,Kinship
+tie_feature_nonzero,34
+tie_feature_mean,0.895
+later_network,Post-attack
+later_ties,13
+later_isolated_agents,13
+pre_attack_ties,38
+kinship_ties,34
+kinship_ties_in_pre,34
+post_attack_ties,13
+post_ties_in_pre,13
+pre_attack_group_sizes,"15, 8, 5"
+post_attack_isolated_agents,13

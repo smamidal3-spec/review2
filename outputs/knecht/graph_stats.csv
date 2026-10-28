@@ -1,0 +1,27 @@
+stat,value
+nodes,26
+ties,63
+mutual_pairs,28
+group_sizes,26
+groups,1
+isolates,0
+max_degree,10
+highest_degree_agent,A09 (degree 10)
+second_highest_degree_agent,A12 (degree 9)
+average_degree,4.846
+hub_share,0.159
+tie_feature,Mutual friendship
+tie_feature_nonzero,28
+tie_feature_mean,0.444
+later_network,Wave 4
+later_ties,86
+later_isolated_agents,1
+pairs_wave1,63
+top_agent_wave1,A09 (degree 10)
+pairs_wave2,84
+top_agent_wave2,A10 (degree 14)
+pairs_wave3,97
+top_agent_wave3,A04 (degree 13)
+pairs_wave4,86
+top_agent_wave4,A08 (degree 15)
+wave1_pairs_still_in_wave4,0.603
